@@ -1,5 +1,8 @@
+import Anthropic from "@anthropic-ai/sdk";
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
+import { ClaudeEvaluationSchema } from "./claudeSchema.js";
 import { AXES, Evaluation, LlmEvaluationSchema, MissionScore } from "./schema.js";
 import { buildEvaluationPrompt, PROMPT_VERSION, RubricCriterion, SYSTEM_PROMPT } from "./prompts.js";
 import { fakeEvaluation } from "./fakeEvaluation.js";
@@ -33,15 +36,41 @@ type EvaluateAnswerResult = {
 };
 
 let openaiClient: OpenAI | null = null;
-const DEFAULT_EVAL_MODEL = "gpt-5-nano";
+let anthropicClient: Anthropic | null = null;
+const DEFAULT_OPENAI_EVAL_MODEL = "gpt-5-nano";
+const DEFAULT_ANTHROPIC_EVAL_MODEL = "claude-opus-5-5";
+const ANTHROPIC_EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
+type AnthropicEffort = typeof ANTHROPIC_EFFORTS[number];
+// 서버 쪽 거절 대체(fallbacks: "default")를 받는 모델. 그 밖의 모델은 대체 없이 보낸다.
+const ANTHROPIC_FALLBACK_MODELS = new Set(["claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5", "claude-fable-5-1", "claude-fable-5-2"]);
 
-// 채점 방식: llm(기본, OpenAI 키가 없으면 휴리스틱으로 폴백) | fake(테스트·시연용 가짜 채점)
+// 채점 방식: llm(기본, 키가 없으면 휴리스틱으로 폴백) | fake(테스트·시연용 가짜 채점)
 export function getEvalMode(): "llm" | "fake" {
   return (process.env.EVAL_MODE ?? "").trim().toLowerCase() === "fake" ? "fake" : "llm";
 }
 
+// 채점에 쓸 AI: EVAL_LLM_PROVIDER가 있으면 그 값, 없으면 Claude 키가 있으면 Claude, OpenAI 키만 있으면 OpenAI
+export function getEvalProvider(): "anthropic" | "openai" {
+  const explicit = (process.env.EVAL_LLM_PROVIDER ?? "").trim().toLowerCase();
+  if (explicit === "anthropic" || explicit === "openai") return explicit;
+  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  if (process.env.OPENAI_API_KEY) return "openai";
+  return "anthropic";
+}
+
 export function getEvalModel() {
-  return (process.env.OPENAI_EVAL_MODEL ?? "").trim() || DEFAULT_EVAL_MODEL;
+  return getEvalProvider() === "anthropic"
+    ? (process.env.ANTHROPIC_EVAL_MODEL ?? "").trim() || DEFAULT_ANTHROPIC_EVAL_MODEL
+    : (process.env.OPENAI_EVAL_MODEL ?? "").trim() || DEFAULT_OPENAI_EVAL_MODEL;
+}
+
+export function getAnthropicEvalEffort(): AnthropicEffort {
+  const value = (process.env.ANTHROPIC_EVAL_EFFORT ?? "").trim().toLowerCase();
+  return (ANTHROPIC_EFFORTS as readonly string[]).includes(value) ? value as AnthropicEffort : "medium";
+}
+
+export function supportsAnthropicFallback(model: string) {
+  return ANTHROPIC_FALLBACK_MODELS.has(model.trim().toLowerCase());
 }
 
 function getOpenAIClient() {
@@ -52,6 +81,55 @@ function getOpenAIClient() {
     });
   }
   return openaiClient;
+}
+
+function getAnthropicClient() {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  if (!anthropicClient) {
+    anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return anthropicClient;
+}
+
+type LlmEvaluation = Omit<Evaluation, "source" | "model">;
+
+async function callOpenAIEvaluation(client: OpenAI, model: string, prompt: string): Promise<LlmEvaluation> {
+  const response = await client.responses.parse({
+    model,
+    // gpt-5·o 계열(추론 모델)은 temperature를 받지 않는다.
+    ...(supportsTemperature(model) ? { temperature: 0 } : {}),
+    input: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: prompt }
+    ],
+    text: {
+      format: zodTextFormat(LlmEvaluationSchema, "jobsim_evaluation")
+    }
+  });
+  const parsed = response.output_parsed;
+  if (!parsed) throw new Error("OpenAI returned an empty evaluation.");
+  return parsed;
+}
+
+async function callClaudeEvaluation(client: Anthropic, model: string, prompt: string): Promise<LlmEvaluation> {
+  const fallback = supportsAnthropicFallback(model);
+  const response = await client.beta.messages.parse({
+    model,
+    max_tokens: 16000,
+    // 안전 분류기가 거절하면 서버가 다른 Claude 모델로 이어서 답하게 한다.
+    ...(fallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: prompt }],
+    output_config: {
+      effort: getAnthropicEvalEffort(),
+      format: betaZodOutputFormat(ClaudeEvaluationSchema)
+    }
+  });
+  if (response.stop_reason === "refusal") throw new Error(`Claude declined the evaluation (${response.stop_details?.category ?? "no category"}).`);
+  if (response.stop_reason === "max_tokens") throw new Error("Claude evaluation hit max_tokens.");
+  if (!response.parsed_output) throw new Error("Claude returned an empty evaluation.");
+  // 서버 스키마(zod v3)로 한 번 더 검증해 이후 계산과 같은 모양을 보장한다.
+  return LlmEvaluationSchema.parse(response.parsed_output);
 }
 
 function hasAnyAxisSignal(signals?: AxisSignals) {
@@ -565,8 +643,10 @@ export async function evaluateAnswer({ mission, answer }: EvaluateAnswerInput): 
     return { evaluation, missionScore: toMissionScore(evaluation, normalizedMission) };
   }
 
-  const openai = getOpenAIClient();
-  if (!openai) {
+  const provider = getEvalProvider();
+  const anthropic = provider === "anthropic" ? getAnthropicClient() : null;
+  const openai = provider === "openai" ? getOpenAIClient() : null;
+  if (!anthropic && !openai) {
     const evaluation = heuristicFallbackEvaluation(normalizedMission, answer, "missing_api_key");
     const calibrated = capScoresForNonLlm(evaluation);
     return { evaluation: calibrated, missionScore: toMissionScore(calibrated, normalizedMission) };
@@ -575,23 +655,10 @@ export async function evaluateAnswer({ mission, answer }: EvaluateAnswerInput): 
   let evaluation: Evaluation;
   const model = getEvalModel();
   try {
-    const response = await openai.responses.parse({
-      model,
-      // gpt-5·o 계열(추론 모델)은 temperature를 받지 않는다.
-      ...(supportsTemperature(model) ? { temperature: 0 } : {}),
-      input: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: buildEvaluationPrompt({ mission: normalizedMission, answer }) }
-      ],
-      text: {
-        format: zodTextFormat(LlmEvaluationSchema, "jobsim_evaluation")
-      }
-    });
-
-    const parsed = response.output_parsed;
-    if (!parsed) {
-      throw new Error("OpenAI returned an empty evaluation.");
-    }
+    const prompt = buildEvaluationPrompt({ mission: normalizedMission, answer });
+    const parsed = anthropic
+      ? await callClaudeEvaluation(anthropic, model, prompt)
+      : await callOpenAIEvaluation(openai!, model, prompt);
 
     parsed.prompt_version = parsed.prompt_version || PROMPT_VERSION;
     evaluation = validateAndRecalculate(answer, {

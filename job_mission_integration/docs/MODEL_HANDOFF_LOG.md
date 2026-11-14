@@ -769,6 +769,22 @@
 
 ---
 
+### 2026-11-14 — 사용자 답변 채점을 Claude로(OpenAI는 설정으로 선택)
+왜:
+- 결과 분석(답변 채점)에 ChatGPT 대신 Claude를 쓰기로 함. 미션 생성은 이미 Claude다.
+
+바뀐 것:
+- `src/lib/evaluator/evaluateAnswer.ts`: 채점 AI를 고르는 `getEvalProvider()`(설정 `EVAL_LLM_PROVIDER` → Claude 키 → OpenAI 키 순). Claude 경로는 공식 SDK(`@anthropic-ai/sdk`)의 `client.beta.messages.parse` + `betaZodOutputFormat`(구조화 출력), 기본 모델 `claude-opus-5-5`, effort `medium`(`ANTHROPIC_EVAL_EFFORT`로 바꿈). 안전 분류기 거절 대비로 서버 쪽 대체(`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`)를 켬(대체를 받는 모델일 때만). 거절·토큰 한도·빈 응답은 실패로 보고 기존처럼 휴리스틱 폴백. 응답은 서버 스키마(zod v3)로 한 번 더 검증
+- `src/lib/evaluator/claudeSchema.ts`: SDK 도우미가 zod v4를 받아 같은 채점 스키마를 `zod/v4`로 적음. 두 스키마가 같은지 테스트가 확인
+- `/health`에 `eval_provider`, `has_anthropic_key`. `.env.example`·`.env.server.example`에 `EVAL_LLM_PROVIDER`, `ANTHROPIC_EVAL_MODEL`, `ANTHROPIC_EVAL_EFFORT`. README·`eval:quality` 안내 문구
+- 의존성: `@anthropic-ai/sdk` 추가
+
+검증:
+- typecheck 통과, check:frontend 34/34, test:unit 98/98(새 테스트 3개: 스키마 일치, 채점 AI 고르기, 가짜 API 서버로 실제 SDK 요청 모양·응답 해석 확인), test:e2e 4/4, postings 6/6, features 9/9, admin 2/2
+- 실제 Claude 호출로는 아직 확인하지 않음(키 없음)
+
+---
+
 ## Open Items (Next)
 
 0000. 관리자 미션 생성 후속(2026-11-14)

@@ -95,7 +95,9 @@ EVALUATE_RATE_LIMIT_MAX=30
 | 환경 변수 | 설명 |
 | --- | --- |
 | `OPENAI_API_KEY` | 사용자 답변 평가에 사용하는 OpenAI API key입니다. |
-| `OPENAI_EVAL_MODEL` | 사용자 답변 평가 모델입니다. 기본값은 `gpt-5-nano`입니다. |
+| `EVAL_LLM_PROVIDER` | 사용자 답변 채점에 쓸 AI(`anthropic` 또는 `openai`). 비우면 `ANTHROPIC_API_KEY`가 있으면 Claude, OpenAI 키만 있으면 OpenAI입니다. |
+| `ANTHROPIC_EVAL_MODEL` / `ANTHROPIC_EVAL_EFFORT` | Claude 채점 모델과 effort. 기본값은 `claude-opus-5-5`, `medium`입니다. |
+| `OPENAI_EVAL_MODEL` | OpenAI로 채점할 때의 모델입니다. 기본값은 `gpt-5-nano`입니다. |
 | `ANTHROPIC_API_KEY` | 관리자 미션 생성(생성과 내용 검수)에 사용하는 Claude API key입니다. |
 | `ANTHROPIC_GENERATION_MODEL` | 미션 생성과 내용 검수에 사용하는 Claude 모델입니다. 기본값은 `claude-opus-5-5`입니다. |
 | `ANTHROPIC_GENERATION_EFFORT` | 미션 생성과 내용 검수의 추론 강도입니다. 기본값은 `medium`입니다. |
@@ -123,7 +125,7 @@ EVALUATE_RATE_LIMIT_MAX=30
 | `PUBLIC_BASE_URL` | 서비스 주소(예: `https://jobsim.example.com`). 카카오 로그인 콜백·쿠키 Secure 판단에 쓴다. 기본값 `http://localhost:{PORT}` |
 | `TRUST_PROXY` | 리버스 프록시(Caddy 등) 뒤에서 돌릴 때 `true` |
 | `DATABASE_PATH` | SQLite 파일 위치. 기본값 `reports/jobsim.sqlite`, 테스트는 `:memory:` |
-| `EVAL_MODE` | `fake`이면 OpenAI 없이 가짜 채점(테스트·시연용). 기본값은 실제 채점 |
+| `EVAL_MODE` | `fake`이면 AI 호출 없이 가짜 채점(테스트·시연용). 기본값은 실제 채점 |
 | `KAKAO_LOGIN_CLIENT_ID` / `KAKAO_LOGIN_CLIENT_SECRET` | 카카오 로그인(OpenID Connect) 앱의 REST API 키와 Client Secret |
 | `KAKAO_LOGIN_REDIRECT_URI` | 카카오 콘솔에 등록한 Redirect URI. 기본값 `{PUBLIC_BASE_URL}/auth/kakao/callback` |
 | `KAKAO_ADMIN_KEY` | 탈퇴할 때 카카오 연결 끊기(unlink)에 쓰는 어드민 키. 없으면 연결 끊기를 건너뛰고 안내만 한다 |
@@ -271,7 +273,7 @@ missions/index.json
 4. 답변을 작성하고 제출합니다.
 5. AI 평가 결과와 피드백을 확인합니다.
 
-사용자 답변 평가는 `OPENAI_API_KEY`와 `OPENAI_EVAL_MODEL`을 사용합니다.
+사용자 답변 평가는 기본으로 Claude(`ANTHROPIC_API_KEY`, `ANTHROPIC_EVAL_MODEL`)를 씁니다. OpenAI로 채점하려면 `EVAL_LLM_PROVIDER=openai`와 `OPENAI_API_KEY`를 넣습니다.
 
 ## CLI로 미션 생성하기
 
@@ -355,7 +357,7 @@ npm run eval:quality -- --runs=3                 # 기준 답안 25개 × 3회 �
 npm run eval:quality -- --runs=3 --fail          # 기준 미달이면 실패 코드로 끝냄
 ```
 
-기준 답안은 `data/eval/reference_answers.json`(쉬운 미션 5개 × 품질 5단계)에 있습니다. 팀원이 채점 기준을 보고 `human_scores`에 축별 점수(0~4, 재지 않는 축은 `null`)를 채우면 사람 점수와의 일치(±1점 비율, 평균 오차)도 함께 계산합니다. 반복 일관성은 실제 AI 채점(`OPENAI_API_KEY`)으로 돌릴 때 의미가 있습니다.
+기준 답안은 `data/eval/reference_answers.json`(쉬운 미션 5개 × 품질 5단계)에 있습니다. 팀원이 채점 기준을 보고 `human_scores`에 축별 점수(0~4, 재지 않는 축은 `null`)를 채우면 사람 점수와의 일치(±1점 비율, 평균 오차)도 함께 계산합니다. 반복 일관성은 실제 AI 채점(`ANTHROPIC_API_KEY` 또는 `OPENAI_API_KEY`)으로 돌릴 때 의미가 있습니다.
 
 ### 사람이 쓴 미션 넣기(U11)
 

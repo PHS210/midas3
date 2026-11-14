@@ -1,7 +1,7 @@
 import express from "express";
 import type { Db } from "../../lib/db/database.js";
 import { currentSchemaVersion } from "../../lib/db/database.js";
-import { getEvalMode, getEvalModel } from "../../lib/evaluator/evaluateAnswer.js";
+import { getEvalMode, getEvalModel, getEvalProvider } from "../../lib/evaluator/evaluateAnswer.js";
 import type { PostingsService } from "../../lib/postings/service.js";
 import type { ServerConfig } from "../config.js";
 
@@ -22,6 +22,8 @@ export function healthRouter(config: ServerConfig, db: Db, postingsService: Post
       uptime_sec: Math.round(process.uptime()),
       app_env: config.appEnv,
       has_openai_key: Boolean(process.env.OPENAI_API_KEY),
+      has_anthropic_key: Boolean(process.env.ANTHROPIC_API_KEY),
+      eval_provider: getEvalProvider(),
       eval_model: getEvalModel(),
       eval_mode: getEvalMode(),
       compatibility_score_gamma: Number.isFinite(config.compatibilityGamma) ? config.compatibilityGamma : 1.5,

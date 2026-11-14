@@ -1,10 +1,10 @@
 // 채점 품질 측정(U18): 기준 답안 25개를 여러 번 채점해 반복 일관성, 품질 단계 순서, 사람 점수와의 일치를 잰다.
 // npm run eval:quality -- --runs=3 --out=reports/eval-quality.json [--fail] [--limit=5]
-// 채점 방식은 서버와 같다(EVAL_MODE, OPENAI_API_KEY). 키가 없으면 휴리스틱, EVAL_MODE=fake면 가짜 채점이라 결과가 항상 같다.
+// 채점 방식은 서버와 같다(EVAL_MODE, EVAL_LLM_PROVIDER, ANTHROPIC_API_KEY·OPENAI_API_KEY). 키가 없으면 휴리스틱, EVAL_MODE=fake면 가짜 채점이라 결과가 항상 같다.
 import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
-import { evaluateAnswer, getEvalMode } from "../src/lib/evaluator/evaluateAnswer.js";
+import { evaluateAnswer, getEvalMode, getEvalModel, getEvalProvider } from "../src/lib/evaluator/evaluateAnswer.js";
 import { MissionStore, missionToEvaluateInput } from "../src/server/missionStore.js";
 import { ROOT_DIR } from "../src/server/config.js";
 
@@ -110,7 +110,9 @@ async function main() {
   const items = limit ? reference.items.slice(0, limit) : reference.items;
   const store = new MissionStore(path.join(ROOT_DIR, "missions"));
   const mode = getEvalMode();
-  console.log(`채점 품질 측정: 기준 답안 ${items.length}개 × ${runs}회, 채점 방식 ${mode}${process.env.OPENAI_API_KEY ? "" : " (OpenAI 키 없음)"}`);
+  const provider = getEvalProvider();
+  const hasKey = provider === "anthropic" ? Boolean(process.env.ANTHROPIC_API_KEY) : Boolean(process.env.OPENAI_API_KEY);
+  console.log(`채점 품질 측정: 기준 답안 ${items.length}개 × ${runs}회, 채점 방식 ${mode} (${provider} ${getEvalModel()}${hasKey ? "" : ", 키 없음 → 휴리스틱"})`);
 
   const results: Array<{
     id: string;
