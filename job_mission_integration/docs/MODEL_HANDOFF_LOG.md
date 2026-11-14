@@ -785,6 +785,44 @@
 
 ---
 
+### 2026-11-15 — 배포 이미지에 미션 생성용 Python 패키지 추가, 배포 문서를 지금 흐름에 맞춤
+왜:
+- Docker 이미지에 Python은 있었지만 미션 생성기가 쓰는 패키지(`anthropic`)가 없어, 이미지로 띄운 서버에서는 관리자 화면의 미션 생성이 시작 전 확인에서 막혔다. 배포 문서는 예전 브랜치와 예전 관리자 흐름을 가리키고 있었다
+
+바뀐 것:
+- `Dockerfile`: `py3-pip`를 깔고 `requirements.txt`를 설치한다. 서버는 `PYTHON_BIN`이 비어 있으면 `python3`를 띄우므로 서버 설정에 더할 것은 없다
+- `.env.server.example`: "관리자 화면의 미션 생성" 묶음(`ANTHROPIC_GENERATION_MODEL`, `ANTHROPIC_GENERATION_EFFORT`, `ANTHROPIC_GENERATION_FALLBACKS`, `ANTHROPIC_GENERATION_SPEED`, `ADMIN_GENERATION_DAILY_LIMIT`, `ADMIN_GENERATION_NARROW`). 이름과 기본값은 `.env.example`과 같다
+- `docs/AWS_EC2_DOCKER_DEPLOY.md`: 받을 브랜치를 `aws`로, 최소 설정을 `ANTHROPIC_API_KEY`와 `ADMIN_PASSWORD`로(답변 채점을 OpenAI로 돌리는 설정은 선택), 데모 흐름을 지금 관리자 화면(새 미션 만들기 → 미션 생성 → 미리보기와 근거 · 검수 → 카탈로그에 추가)으로
+- `docs/OPERATIONS.md`: 필수 설정을 `ANTHROPIC_API_KEY`로, `OPENAI_API_KEY`는 선택으로
+- `README.md`: 준비물에 "Docker 이미지에는 이 패키지가 들어 있습니다" 한 줄
+
+수정 파일:
+- `Dockerfile`, `.env.server.example`, `docs/AWS_EC2_DOCKER_DEPLOY.md`, `docs/OPERATIONS.md`, `README.md`
+
+검증:
+- `docker build` 통과(linux/amd64). 이미지 안에서 `anthropic` 1.17.0을 불러왔고, 키를 넘기지 않은 시작 전 확인(`python3 -m src.mission_generation.preflight`)이 패키지 통과 뒤 `LLM_API_KEY_MISSING`에서 멈췄다. 이미지 안의 `.env*` 파일은 `.env.server.example`뿐이다
+- 가짜 모드(`ADMIN_GENERATION_MODE=fake`, 복사한 미션 폴더를 연결)로 띄운 컨테이너에서 경로만으로 직업 목록(74개) → 문장 목록 → 생성 → 카탈로그에 추가를 확인했다. 추가한 미션의 키는 `jobsim_admin_v1__mission_K000000832_easy_002`였고 연결한 폴더의 `missions/index.json`에 들어갔다. 컨테이너를 지우고 새로 띄워도 생성 기록(추가됨)과 추가한 미션이 남았다. 카탈로그에서 삭제 · 생성 기록에서 삭제는 200을 주었고 미션 수가 150으로 돌아왔다
+- 같은 컨테이너의 `/admin.html`을 브라우저로 열어 암호 화면과 새 미션 만들기 화면(직업 74개)을 확인했다
+- `docker compose up -d --build`로 띄운 컨테이너가 healthcheck `healthy`가 됐고 `/api/bootstrap`이 직업 50개 · 미션 150개를 주었다
+- 이미지 안에서 typecheck 통과, check:frontend 34/34, test:unit 98/98, Python 테스트 386개 통과
+
+---
+
+### 2026-11-15 — CI 실행 환경을 Ubuntu 24.04로 고정
+왜:
+- GitHub Actions의 `ubuntu-latest`가 Ubuntu 26.04를 가리키게 되면서 "Playwright 브라우저 설치" 단계가 실패했다(Playwright 1.60.0이 그 버전에 Chromium을 설치하지 못한다). 그 뒤의 E2E 네 단계가 돌지 못했다
+
+바뀐 것:
+- `.github/workflows/ci.yml`: `runs-on`을 `ubuntu-24.04`로
+
+수정 파일:
+- `.github/workflows/ci.yml`
+
+검증:
+- Ubuntu 24.04 컨테이너(Playwright 1.60.0 공식 이미지)에서 `npm ci`, `npx playwright install --with-deps chromium`이 통과했고, test:e2e 4/4, test:e2e:postings 6/6, test:e2e:features 9/9, test:e2e:admin 2/2
+
+---
+
 ## Open Items (Next)
 
 0000. 관리자 미션 생성 후속(2026-11-14)
