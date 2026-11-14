@@ -11,7 +11,8 @@ defaults:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # Playwright가 지원하는 Ubuntu 버전으로 고정한다(ubuntu-latest가 가리키는 버전이 바뀌면 브라우저 설치가 실패한다)
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       EVAL_MODE: fake

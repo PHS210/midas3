@@ -808,6 +808,21 @@
 
 ---
 
+### 2026-11-15 — CI 실행 환경을 Ubuntu 24.04로 고정
+왜:
+- GitHub Actions의 `ubuntu-latest`가 Ubuntu 26.04를 가리키게 되면서 "Playwright 브라우저 설치" 단계가 실패했다(Playwright 1.60.0이 그 버전에 Chromium을 설치하지 못한다). 그 뒤의 E2E 네 단계가 돌지 못했다
+
+바뀐 것:
+- `.github/workflows/ci.yml`: `runs-on`을 `ubuntu-24.04`로
+
+수정 파일:
+- `.github/workflows/ci.yml`
+
+검증:
+- Ubuntu 24.04 컨테이너(Playwright 1.60.0 공식 이미지)에서 `npm ci`, `npx playwright install --with-deps chromium`이 통과했고, test:e2e 4/4, test:e2e:postings 6/6, test:e2e:features 9/9, test:e2e:admin 2/2
+
+---
+
 ## Open Items (Next)
 
 0000. 관리자 미션 생성 후속(2026-11-14)
