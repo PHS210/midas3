@@ -43,7 +43,7 @@ docker compose version
 ```bash
 git clone <repo-url>
 cd midas3
-git switch deploy/aws-ec2-docker-demo
+git switch aws
 cd job_mission_integration
 ```
 
@@ -52,8 +52,8 @@ cd job_mission_integration
 ```bash
 cd midas3
 git fetch origin
-git switch deploy/aws-ec2-docker-demo
-git pull --ff-only origin deploy/aws-ec2-docker-demo
+git switch aws
+git pull --ff-only origin aws
 cd job_mission_integration
 ```
 
@@ -81,11 +81,14 @@ nano .env.server
 최소한 아래 값은 설정해야 합니다.
 
 ```env
-OPENAI_API_KEY=sk-...
-OPENAI_GENERATION_MODEL=gpt-5.4-nano
-OPENAI_EVAL_MODEL=gpt-4o-mini
+ANTHROPIC_API_KEY=sk-ant-...
 ADMIN_PASSWORD=strong-demo-password
 ```
+
+- `ANTHROPIC_API_KEY`는 사용자 답변 채점과 관리자 화면의 미션 생성에 씁니다.
+- 답변 채점을 OpenAI로 돌리려면 `EVAL_LLM_PROVIDER=openai`와 `OPENAI_API_KEY`, `OPENAI_EVAL_MODEL`을 넣습니다.
+- 미션 생성에 쓰는 모델, 하루 생성 한도 같은 값은 `.env.server.example`의 "관리자 화면의 미션 생성" 묶음에 있습니다. 비워 두면 기본값으로 동작합니다.
+- 미션 생성기가 쓰는 Python 패키지(`anthropic`)는 이미지에 들어 있으므로 서버에 따로 설치하지 않습니다.
 
 컨테이너 내부 서버는 `8080` 포트로 실행됩니다. EC2 호스트에서 다른 포트로 노출하고 싶다면 Docker Compose 실행 시 `JOBSIM_HOST_PORT`를 설정합니다.
 
@@ -133,13 +136,13 @@ curl http://localhost:${JOBSIM_HOST_PORT:-8080}/api/bootstrap
 
 1. 관리자 페이지를 엽니다.
 2. `ADMIN_PASSWORD`를 입력합니다.
-3. 생성 가능한 직무와 난이도를 선택합니다.
-4. 미션 생성을 실행합니다.
-5. 생성 결과 미리보기를 확인합니다.
-6. 내보내기 승인을 클릭합니다.
+3. `새 미션 만들기`에서 직업, 하는 일 문장, 난이도를 고릅니다.
+4. `미션 생성`을 누릅니다. 사이드바의 API 상태가 "Claude API 연결됨"이면 생성할 수 있습니다.
+5. 결과 화면의 `미리보기와 근거`, `검수` 탭을 확인합니다.
+6. `카탈로그에 추가`를 누릅니다.
 7. 사용자 페이지를 새로고침하고 새 미션이 카탈로그에 반영되었는지 확인합니다.
 
-미션 생성 결과는 `outputs/pilot/v1/runs`에 저장됩니다. 내보내기 승인을 하면 `missions/index.json`과 `missions/scenarios/*.json`이 갱신됩니다.
+미션 생성 결과는 `outputs/pilot/v1/runs`에, 생성 기록은 `reports/jobsim.sqlite`에 저장됩니다. 카탈로그에 추가하면 `missions/index.json`과 `missions/scenarios/*.json`이 갱신됩니다. 세 폴더(`missions`, `outputs`, `reports`)는 EC2의 폴더에 연결되어 있어 컨테이너를 새로 만들어도 남습니다.
 
 ## 9. 운영 명령어
 
@@ -160,8 +163,8 @@ docker compose restart jobsim
 ```bash
 cd ~/midas3
 git fetch origin
-git switch deploy/aws-ec2-docker-demo
-git reset --hard origin/deploy/aws-ec2-docker-demo
+git switch aws
+git reset --hard origin/aws
 cd job_mission_integration
 docker compose up -d --build
 ```

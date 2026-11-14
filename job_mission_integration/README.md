@@ -23,7 +23,7 @@
 python -m pip install -r requirements.txt
 ```
 
-서버는 `PYTHON_BIN`에 적은 Python(비우면 Windows는 `python`, 그 외 환경은 `python3`)으로 미션 생성기를 실행하므로, 그 Python에 패키지를 설치합니다. 가상환경에 설치했다면 `PYTHON_BIN`에 가상환경의 Python 경로를 적습니다.
+서버는 `PYTHON_BIN`에 적은 Python(비우면 Windows는 `python`, 그 외 환경은 `python3`)으로 미션 생성기를 실행하므로, 그 Python에 패키지를 설치합니다. 가상환경에 설치했다면 `PYTHON_BIN`에 가상환경의 Python 경로를 적습니다. Docker 이미지에는 이 패키지가 들어 있습니다.
 
 ### 필수 파일과 폴더
 

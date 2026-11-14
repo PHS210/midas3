@@ -7,9 +7,10 @@ cp .env.server.example .env.server
 ```
 
 필수:
-- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY` (사용자 답변 채점, 관리자 화면의 미션 생성)
 
 선택:
+- `OPENAI_API_KEY` (`EVAL_LLM_PROVIDER=openai`로 답변 채점을 OpenAI로 돌릴 때)
 - `OPENAI_EVAL_MODEL` (기본 `gpt-5-nano`)
 - `PORT` (기본 `8080`)
 - `EVALUATE_RATE_LIMIT_MAX` (기본 `10`)
