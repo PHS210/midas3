@@ -109,4 +109,8 @@ test("관리자: 암호가 틀리면 들어가지 못한다", async ({ page }) =
   await page.locator("aside.side").getByRole("button", { name: "로그아웃" }).click();
   await expect(page.getByLabel("암호", { exact: true })).toBeVisible();
   await expect(page.locator("aside.side")).toHaveCount(0);
+
+  // 암호 화면에서 사용자 화면으로 나갈 수 있다
+  await page.getByRole("link", { name: "사용자 화면으로" }).click();
+  await expect(page).toHaveURL(/\/index\.html$/);
 });

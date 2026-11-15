@@ -233,6 +233,9 @@ function logoHtml() {
   return `<div class="logo"><span class="nm">JOB<span>SIM</span></span><span class="mk" aria-hidden="true">J<span>S</span></span><span class="tag">Admin</span></div>`;
 }
 
+// 암호 화면과 멈춤 화면에는 사이드바가 없다. 여기서 사용자 화면으로 나가는 길(같은 창)
+const LEAVE_LINK = `<a class="link leave" href="/index.html">사용자 화면으로 →</a>`;
+
 // 처음 상태를 묻는 동안 보이는 화면
 export function renderLoading(root, text = "확인하는 중입니다") {
   root.innerHTML = `<div class="boot" role="status"><div class="row"><span class="spin"></span>${esc(text)}</div></div>`;
@@ -241,7 +244,8 @@ export function renderLoading(root, text = "확인하는 중입니다") {
 // 더 갈 수 없을 때(서버에 암호가 없음 등) 글만 보이고 멈춘다. retry를 주면 "다시 시도" 버튼을 둔다
 export function renderStop(root, message, { retry } = {}) {
   root.innerHTML = `<div class="boot">${logoHtml()}<div class="msg" role="alert">${esc(message)}</div>
-    ${retry ? `<button class="btn" type="button" data-retry>다시 시도</button>` : ""}</div>`;
+    ${retry ? `<button class="btn" type="button" data-retry>다시 시도</button>` : ""}
+    ${LEAVE_LINK}</div>`;
   if (retry) root.querySelector("[data-retry]").addEventListener("click", () => retry());
 }
 
@@ -258,6 +262,7 @@ export function renderAuth(root, { error, onSubmit, onCancel } = {}) {
       <p class="auth-error" data-testid="auth-error" role="alert"${error ? "" : " hidden"}>${esc(error || "")}</p>
       <button class="btn pri lg" type="submit">확인</button>
       ${onCancel ? `<button class="btn ghost" type="button" data-cancel>조회만 하기</button>` : ""}
+      ${LEAVE_LINK}
     </form>
   </div>`;
   const form = root.querySelector("form");
