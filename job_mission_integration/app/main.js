@@ -765,6 +765,22 @@ async function bootstrap() {
   }
   if (fromUrl) document.getElementById("simulation")?.scrollIntoView({ behavior: "smooth" });
 }
+// 쓰던 답이 사라질 수 있을 때 새로고침·뒤로 가기·다른 페이지 이동을 누르면 브라우저가 한 번 묻게 한다.
+// 로그인한 사용자의 미션 답은 자동 저장되어 '이어 쓰기'로 되살릴 수 있으므로 묻지 않는다.
+function hasUnsavedWork() {
+  if (state.pendingScores.length > 0) return true;
+  if (state.screen === "mission") return !SESSION.authenticated && state.missionAnswer.trim().length > 0;
+  if (state.screen === "retry" && state.retry && !state.retry.second) {
+    return (state.retry.draft || "").trim() !== (state.retry.first?.answer || "").trim();
+  }
+  return false;
+}
+window.addEventListener("beforeunload", (event) => {
+  if (!hasUnsavedWork()) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
+
 window.goSim = function () {
   document.getElementById("simulation").scrollIntoView({ behavior: "smooth" });
 };
