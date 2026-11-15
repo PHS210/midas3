@@ -62,6 +62,10 @@ test("Python 명령 인자: 관리자 경로는 새 방식의 인자만 쓰고 �
   assert.deepEqual(reviewArgs("r"), ["-u", "-m", "src.mission_generation.mission_reviewer", "--run-dir", "r"]);
   assert.deepEqual(exportArgs("s", "m"), ["scripts/export_missions.py", "--outputs", "s", "--missions-dir", "m"]);
   assert.deepEqual(preflightArgs(), ["-m", "src.mission_generation.preflight"]);
+  // 속도를 주면 설정 파일이나 셸의 값보다 먼저다. 주지 않으면 건드리지 않는다
+  assert.equal(pythonSpawnEnv({ ANTHROPIC_GENERATION_SPEED: "fast" }, "standard").ANTHROPIC_GENERATION_SPEED, "standard");
+  assert.equal(pythonSpawnEnv({}, "fast").ANTHROPIC_GENERATION_SPEED, "fast");
+  assert.equal(pythonSpawnEnv({ ANTHROPIC_GENERATION_SPEED: "fast" }).ANTHROPIC_GENERATION_SPEED, "fast");
   const env = pythonSpawnEnv({ MISSION_LLM_PROVIDER: "openai", PATH: "x" });
   assert.deepEqual([env.MISSION_LLM_PROVIDER, env.PYTHONIOENCODING, env.PYTHONUNBUFFERED, env.PATH], ["anthropic", "utf-8", "1", "x"]);
 });
@@ -113,7 +117,7 @@ test("실제 자료: 고를 수 있는 직업 74개, 문장 399개, 연결 548�
 
 test("생성 기록과 하루 건수: 넣기, 고치기, 지우기, 기록을 지워도 그날 건수는 줄지 않는다", () => {
   const db = openDatabase(":memory:");
-  assert.equal(currentSchemaVersion(db), 2);
+  assert.equal(currentSchemaVersion(db), 4);   // 3: 실행 기록의 속도 칸, 4: 관리자 설정(암호 해시)
   const a = insertGenerationRun(db, sampleRunRow({ id: "a" }));
   insertGenerationRun(db, sampleRunRow({ id: "b" }));
   assert.equal(a.status, "running");

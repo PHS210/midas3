@@ -120,6 +120,7 @@ svg{flex:none}
 .tchip.on{background:var(--ac-bg);border-color:var(--ac-line);color:#c3c9ff;font-weight:600}
 .tchip.off{opacity:.38;cursor:not-allowed;border-style:dashed}
 .toggle{display:flex;align-items:center;gap:9px}
+.toggle .swnote{margin-left:auto;font-size:12px;color:var(--tx3);text-align:right}
 .sw{width:30px;height:17px;border-radius:999px;background:var(--ac);position:relative;flex:none}
 .sw::after{content:"";position:absolute;right:2px;top:2px;width:13px;height:13px;border-radius:50%;background:#fff}
 .hr{height:1px;background:var(--line);margin:14px 0}
@@ -135,6 +136,9 @@ svg{flex:none}
 @keyframes sp{to{transform:rotate(360deg)}}
 .pbar{height:6px;border-radius:3px;background:rgba(255,255,255,.07);margin:16px 0 18px;overflow:hidden}
 .pbar i{display:block;width:46%;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--ac),var(--ac-h))}
+.pbar i[data-role="bar"]{transition:width 1s linear}
+.prog .now .elapsed{font-size:12px;font-weight:400;color:var(--tx3);font-variant-numeric:tabular-nums}
+.prog .now .okmark{display:inline-flex;color:var(--ok)}
 .vstep{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
 .vstep .n{width:22px;height:22px;border-radius:50%;border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:11.5px;color:var(--tx3)}
 .vstep.done .n{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
@@ -214,6 +218,7 @@ table.dt .ttl{font-weight:500}
 table.dt .num{text-align:center;color:var(--tx2)}
 table.dt tr.sub td{background:rgba(255,255,255,.015);padding-top:8px;padding-bottom:8px}
 table.dt tr.sub td:first-child{padding-left:40px}
+table.dt tr.sub.focus td{background:var(--ac-bg)}
 .st2{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .st2 i{width:7px;height:7px;border-radius:50%;background:var(--tx4)}
 .st2.wait i{background:var(--warn)}.st2.added i{background:var(--ok)}.st2.fail i{background:var(--danger)}
@@ -308,6 +313,8 @@ button.link,a.link{white-space:nowrap}
 .auth-error{color:var(--danger);font-size:12.5px;margin:8px 0 0}
 .auth-card .btn.lg{margin-top:16px}
 .auth-card .btn.ghost{width:100%;margin-top:6px}
+.auth-card .leave{display:block;text-align:center;margin-top:14px;font-size:12.5px}
+.boot .leave{font-size:12.5px}
 
 /* 확인 창 */
 .dlg-back{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.6)}
@@ -315,6 +322,8 @@ button.link,a.link{white-space:nowrap}
 .dlg h2{font-size:15px;font-weight:600;margin:0}
 .dlg p{color:var(--tx2);margin:8px 0 0}
 .dlg .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+form.dlg .flbl{display:block;margin-top:14px}
+form.dlg .hint{margin-top:12px}
 
 /* 알림 */
 .adm-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:110;max-width:calc(100% - 32px);padding:9px 14px;border-radius:var(--rs);border:1px solid var(--line2);background:#1d2026;color:var(--tx);box-shadow:0 10px 30px rgba(0,0,0,.45)}

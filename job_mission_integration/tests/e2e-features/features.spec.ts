@@ -112,20 +112,6 @@ test("직무 상세: 하는 일·역량·환경·임금·전망·출처, 비슷�
   await expect(page.getByRole("link", { name: "이 직무 체험하기" })).toHaveCount(0);
 });
 
-test("비교: 최대 3개, 브라우저에 유지, 적합도 점수 없음", async ({ page }) => {
-  await page.goto("/jobs.html?q=%EB%B6%84%EC%84%9D");
-  const buttons = page.locator("[data-compare]");
-  await buttons.nth(0).click();
-  await buttons.nth(1).click();
-  await page.goto("/compare.html");
-  await expect(page.locator("table.compare thead th")).toHaveCount(3);
-  await expect(page.locator("table.compare")).not.toContainText("적합도");
-  await page.reload();
-  await expect(page.locator("table.compare thead th")).toHaveCount(3);
-  await page.locator("[data-remove]").first().click();
-  await expect(page.locator("table.compare thead th")).toHaveCount(2);
-});
-
 test("로그인 전 체험 → 결과 확장(해석·근거·흥미 변화·재도전·다음 미션·요구역량·강점·카드) → 로그인하면 내 기록으로", async ({ page }) => {
   const errors = trackErrors(page);
   await playToResult(page);
@@ -307,50 +293,54 @@ test("재도전 표는 결과 화면처럼 미측정 축을 '미측정'으로, �
   await expect(table.locator("tr", { hasText: "관찰·탐색" })).toContainText("미측정");
 });
 
-test("관심 직무: 비교할 직무를 고르고, 메모가 비교 담기 뒤에도 유지되고, 탐색·비교 화면에 관심·메모가 보인다", async ({ page }) => {
+test("관심 직무: 메모가 저장 뒤에도 유지되고, 탐색 화면에 관심·메모가 보인다", async ({ page }) => {
   await devSignup(page, "member2", "메모회원");
-  for (const code of ["K000001080", "K000000872", "K000000997", "K000001179"]) {
+  for (const code of ["K000001080", "K000000872"]) {
     await page.request.put(`/api/me/interests/${code}`, {
       headers: { "x-csrf-token": (await (await page.request.get("/api/auth/session")).json()).csrf_token },
       data: {}
     });
   }
-  await page.goto("/me.html");
-  const picks = page.locator("[data-pick]");
-  await expect(picks).toHaveCount(4);
-  await expect(page.locator("[data-pick]:checked")).toHaveCount(3);
-  // 4번째를 더 고르려 하면 막히고, 하나를 빼고 고르면 그 조합으로 비교한다(U01)
-  const last = picks.nth(3);
-  await last.check({ force: true }).catch(() => {});
-  await expect(page.locator("[data-pick]:checked")).toHaveCount(3);
-  await picks.nth(0).uncheck();
-  await last.check();
-  const pickedCodes = await page.locator("[data-pick]:checked").evaluateAll((els) => els.map((el) => (el as HTMLInputElement).dataset.pick).sort());
-  await page.locator("#compare-picked").click();
-  await page.waitForURL(/compare\.html/);
-  await expect(page.locator("table.compare thead th")).toHaveCount(4);
-  for (const code of pickedCodes) await expect(page.locator(`table.compare a[href="/job.html?code=${code}"]`)).toHaveCount(1);
 
-  // U04·U05: 메모는 여러 줄 입력칸, 저장 뒤 '비교 담기'를 눌러도 그대로
+  // U04·U05: 메모는 여러 줄 입력칸, 저장한 뒤 화면을 다시 열어도 그대로
   await page.goto("/me.html");
+  await expect(page.locator(".card.interest")).toHaveCount(2);
   const memo = "데이터로 문제를 푸는 일이 재밌어 보여서 다음 학기에 관련 수업을 듣고 공모전도 나가보려고 함";
   const memoBox = page.locator("textarea#memo-K000001080");
   await expect(memoBox).toBeVisible();
   await memoBox.fill(memo);
   await page.locator('[data-memo="K000001080"]').click();
   await expect(page.getByText("메모를 저장했습니다.")).toBeVisible();
-  await page.locator('.card.interest [data-compare="K000001080"]').click();
+  await page.reload();
   await expect(page.locator("textarea#memo-K000001080")).toHaveValue(memo);
 
-  // U02·U03: 탐색 목록과 비교표에서 관심 여부와 메모가 보인다
+  // U02: 탐색 목록에서 관심 여부와 메모가 보인다
   await page.goto("/jobs.html?q=%EB%8D%B0%EC%9D%B4%ED%84%B0%EB%B6%84%EC%84%9D%EA%B0%80");
   const card = page.locator(".job-card", { hasText: "데이터분석가" }).first();
   await expect(card.locator(".chip-interest")).toHaveText("관심 저장됨");
   await expect(card.locator(".memo-text")).toContainText("공모전");
-  await page.goto("/compare.html?codes=K000001080,K000000822");
-  const memoRow = page.locator("table.compare tr", { hasText: "내 메모" });
-  await expect(memoRow).toContainText("공모전");
-  await expect(memoRow).toContainText("관심 저장 후 메모 가능");
+});
+
+test("체험 단계가 바뀌면 화면이 체험 영역 맨 위로 맞춰진다", async ({ page }) => {
+  // 직무 선택 화면은 카드가 많아 길다. 아래쪽에서 다음 단계로 넘어가도 체험 영역이 화면에 남아야 한다.
+  const simulationAtTop = async () => {
+    const top = await page.locator("#simulation").evaluate((el) => Math.round(el.getBoundingClientRect().top));
+    return top >= 0 && top <= 120;
+  };
+  await page.goto("/");
+  await page.locator(".jc").nth(40).click();
+  await page.locator("#btn-start").click();
+  await expect(page.locator("#btn-pnext")).toBeVisible();
+  await expect.poll(simulationAtTop).toBe(true);
+
+  await page.locator("#btn-pnext").click();
+  await expect(page.locator(".mc").first()).toBeVisible();
+  await expect.poll(simulationAtTop).toBe(true);
+
+  await page.locator(".mc").last().click();
+  await page.locator("#btn-ml-start").click();
+  await expect(page.locator("#work-request")).toBeVisible();
+  await expect.poll(simulationAtTop).toBe(true);
 });
 
 // ── 미션 카탈로그 교체 뒤 회귀 테스트 ─────────────────────────

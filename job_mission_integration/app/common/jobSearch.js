@@ -11,16 +11,17 @@ function bigrams(text) {
   return out;
 }
 
-// 점수: 이름 일치 > 이름 포함 > 별칭(일상어) > 중분류 > 요약
+// 점수: 이름 일치 > 이름이 검색어로 시작 > 별칭(일상어)과 같음 > 이름 포함 > 별칭 포함 > 중분류 > 요약
+// 별칭과 똑같은 말은 이름에 우연히 들어 있는 경우보다 먼저 보여준다(예: '마케터' → 마케팅전문가가 텔레마케터보다 먼저).
 export function scoreJob(job, query) {
   const q = normalize(query);
   if (!q) return 1;
   const name = normalize(job.name);
   if (name === q) return 100;
   if (name.startsWith(q)) return 80;
-  if (name.includes(q)) return 70;
   const aliases = (job.aliases || []).map(normalize);
-  if (aliases.some((alias) => alias === q)) return 65;
+  if (aliases.some((alias) => alias === q)) return 75;
+  if (name.includes(q)) return 70;
   if (aliases.some((alias) => alias.includes(q) || (q.length >= 2 && q.includes(alias) && alias.length >= 2))) return 55;
   if (normalize(job.mdcl).includes(q)) return 30;
   if (normalize(job.summary).includes(q)) return 15;

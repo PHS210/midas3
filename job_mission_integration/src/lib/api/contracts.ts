@@ -294,10 +294,18 @@ export const AdminGenerationStartRequestSchema = z.object({
   execJobId: z.string().regex(/^exec_\d{3}$/),
   unitKey: z.string().regex(/^\d{8}:\d{2}$/),
   difficulty: z.enum(["easy", "normal", "hard"]),
-  review: z.boolean().default(true)
+  review: z.boolean().default(true),
+  // 빠른 모드. 하루 건수를 2건 쓴다. 보내지 않으면 보통 속도다
+  fast: z.boolean().default(false)
 }).strict();
 
-export const AdminMaterialTypesQuerySchema = AdminGenerationStartRequestSchema.omit({ review: true });
+// 관리자 암호 바꾸기. 새 암호의 조건(4자 이상 등)은 AdminAuth가 본다.
+export const AdminPasswordChangeRequestSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: z.string().min(1).max(200)
+}).strict();
+
+export const AdminMaterialTypesQuerySchema = AdminGenerationStartRequestSchema.omit({ review: true, fast: true });
 
 export const AdminGenerationRunsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50)
@@ -323,6 +331,7 @@ export const AdminGenerationRunListItemSchema = z.object({
     linkKind: z.string(),
     difficulty: z.enum(["easy", "normal", "hard"]),
     review: z.boolean(),
+    fast: z.boolean(),
     allowedMaterialTypes: z.array(z.string()).nullable()
   }),
   createdAt: z.string(),

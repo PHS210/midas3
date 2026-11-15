@@ -556,5 +556,6 @@ export function renderMissionScreen({
         <button class="btn btn-g" id="btn-mission-back" style="width:100%">← 미션 다시 선택</button>
       </div>
     </div>
+    <button class="btn btn-p ans-jump" id="btn-ans-jump" type="button" hidden>답변 쓰러 가기 ↓</button>
   </div>`;
 }

@@ -34,6 +34,9 @@ export interface PreflightResult {
   checks: PreflightCheck[];
 }
 
+// 생성과 검수의 속도. fast는 빠른 모드(비용 약 2배)다
+export type GenerationSpeed = "fast" | "standard";
+
 export type TargetPlan = { ok: true; allowedMaterialTypes: string[] | null } | { ok: false; code: string; message: string };
 
 export interface CommandOutcome {
@@ -47,8 +50,9 @@ export interface GenerationCommands {
   preflight(): Promise<PreflightResult>;
   // outFile이 없으면 파일을 쓰지 않는다(--print).
   planTarget(input: TargetInput, options: { narrow: boolean; outFile?: string }): Promise<TargetPlan>;
-  generate(targetFile: string, onLine: (line: string) => void): Promise<CommandOutcome>;
-  review(runDir: string, onLine: (line: string) => void): Promise<CommandOutcome>;
+  // speed를 주지 않으면 보통 속도다
+  generate(targetFile: string, onLine: (line: string) => void, speed?: GenerationSpeed): Promise<CommandOutcome>;
+  review(runDir: string, onLine: (line: string) => void, speed?: GenerationSpeed): Promise<CommandOutcome>;
   exportMission(stagingDir: string, missionsDir: string): Promise<CommandOutcome>;
 }
 
@@ -57,12 +61,14 @@ const SHORT_TIMEOUT_MS = 30_000; // 시작 전 확인, 대상 파일
 const EXPORT_TIMEOUT_MS = 60_000;
 
 // 관리자 화면의 생성은 Claude로 돈다. 셸이나 .env에 다른 제공자가 적혀 있어도 이 자리에서 못박는다.
-export function pythonSpawnEnv(base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+// speed를 주면 ANTHROPIC_GENERATION_SPEED도 못박는다(셸 환경 변수가 설정 파일보다 먼저라, 파일에 fast가 있어도 standard로 끌 수 있다).
+export function pythonSpawnEnv(base: NodeJS.ProcessEnv = process.env, speed?: GenerationSpeed): NodeJS.ProcessEnv {
   return {
     ...base,
     PYTHONUNBUFFERED: "1",
     PYTHONIOENCODING: "utf-8",
-    MISSION_LLM_PROVIDER: "anthropic"
+    MISSION_LLM_PROVIDER: "anthropic",
+    ...(speed ? { ANTHROPIC_GENERATION_SPEED: speed } : {})
   };
 }
 
@@ -139,7 +145,7 @@ export function createLineSplitter(onLine: (line: string) => void): { push(chunk
   };
 }
 
-function runPython(config: ServerConfig, args: string[], timeoutMs: number, onLine: (line: string) => void = () => {}): Promise<CommandOutcome> {
+function runPython(config: ServerConfig, args: string[], timeoutMs: number, onLine: (line: string) => void = () => {}, speed?: GenerationSpeed): Promise<CommandOutcome> {
   return new Promise<CommandOutcome>((resolve) => {
     const lines: string[] = [];
     let timedOut = false;
@@ -163,7 +169,7 @@ function runPython(config: ServerConfig, args: string[], timeoutMs: number, onLi
 
     let child: ReturnType<typeof spawn>;
     try {
-      child = spawn(config.adminGeneration.pythonBin, args, { cwd: config.paths.root, env: pythonSpawnEnv(), windowsHide: true });
+      child = spawn(config.adminGeneration.pythonBin, args, { cwd: config.paths.root, env: pythonSpawnEnv(process.env, speed), windowsHide: true });
     } catch (error) {
       finish(null, error instanceof Error ? error.message : String(error));
       return;
@@ -249,12 +255,12 @@ export function createPythonCommands(config: ServerConfig): GenerationCommands {
       return { ok: true, allowedMaterialTypes: Array.isArray(raw) ? raw.map(String) : null };
     },
 
-    generate(targetFile, onLine) {
-      return runPython(config, generateArgs(path.resolve(targetFile), ncsRoot()), config.adminGeneration.generateTimeoutMs, onLine);
+    generate(targetFile, onLine, speed = "standard") {
+      return runPython(config, generateArgs(path.resolve(targetFile), ncsRoot()), config.adminGeneration.generateTimeoutMs, onLine, speed);
     },
 
-    review(runDir, onLine) {
-      return runPython(config, reviewArgs(path.resolve(runDir)), config.adminGeneration.reviewTimeoutMs, onLine);
+    review(runDir, onLine, speed = "standard") {
+      return runPython(config, reviewArgs(path.resolve(runDir)), config.adminGeneration.reviewTimeoutMs, onLine, speed);
     },
 
     exportMission(stagingDir, missionsDir) {

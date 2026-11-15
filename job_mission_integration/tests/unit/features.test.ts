@@ -25,6 +25,9 @@ test("탐색: 537개, 이름 일치가 먼저, 일상어(별칭)로도 찾음, �
   assert.equal(byName[0].code, "K000001080");
   const byAlias = filterJobs(jobs, { q: "데이터 사이언티스트" });
   assert.ok(byAlias.some((job: { code: string }) => job.code === "K000001080"), "별칭으로 찾아야 해");
+  // 별칭과 똑같은 말은 이름에 우연히 들어 있는 직무보다 먼저(마케팅전문가 > 텔레마케터), 흔한 말도 결과가 나온다
+  assert.equal(filterJobs(jobs, { q: "마케터" })[0].code, "K000000872");
+  for (const word of ["코딩", "AI", "프로그래밍"]) assert.ok(filterJobs(jobs, { q: word }).length > 0, `'${word}' 검색 결과가 있어야 해`);
   const field = filterJobs(jobs, { field: "보건·의료직" });
   assert.ok(field.length > 0 && field.every((job: { lrcl: string }) => job.lrcl === "보건·의료직"));
   assert.deepEqual(filterJobs(jobs, { experienceableOnly: true }).map((job: { code: string }) => job.code), ["K000001080"]);

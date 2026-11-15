@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// 기능 지도 E2E(탐색·상세·비교·로그인·기록·재도전·결과 카드). 외부 API 없이 돈다:
+// 기능 지도 E2E(탐색·상세·로그인·기록·재도전·결과 카드). 외부 API 없이 돈다:
 // 가짜 채점(EVAL_MODE=fake), 개발용 로그인(AUTH_DEV_LOGIN), 고정 공고(POSTINGS_FIXTURE), 메모리 DB.
 export default defineConfig({
   testDir: "./tests/e2e-features",

@@ -1,6 +1,5 @@
-import { api, esc, formatWon, getSession, renderFooter, renderHeader, toast } from "./common/site.js";
+import { api, esc, formatWon, getSession, renderFooter, renderHeader } from "./common/site.js";
 import { filterJobs, suggestWhenEmpty } from "./common/jobSearch.js";
-import { initCompareTray, isInCompare, readCompare, toggleCompare, COMPARE_MAX } from "./common/compareTray.js";
 import { clearRecent, readRecent } from "./common/recent.js";
 import { jobImage } from "./common/jobImages.js";
 
@@ -58,11 +57,6 @@ async function loadInterests() {
   }
 }
 
-function compareButton(job) {
-  const inCompare = isInCompare(job.code);
-  return `<button class="btn btn-sm" type="button" data-compare="${esc(job.code)}" aria-pressed="${inCompare}">${inCompare ? "비교에서 빼기" : "비교 담기"}</button>`;
-}
-
 function card(job) {
   return `<article class="card job-card">
     <div class="top">
@@ -80,7 +74,6 @@ function card(job) {
         ${job.experienceable ? `<span class="chip chip-ok">체험 가능</span>` : ""}
         ${job.salary_p50 ? `<span class="chip">중위 임금 ${formatWon(job.salary_p50)}</span>` : ""}
       </div>
-      ${compareButton(job)}
     </div>
   </article>`;
 }
@@ -117,9 +110,8 @@ function renderRecent() {
 }
 
 async function main() {
-  renderHeader("jobs", { compareCount: readCompare().length });
+  renderHeader("jobs");
   renderFooter();
-  initCompareTray();
   const state = readState();
   $("q").value = state.q;
   $("exp").checked = state.exp;
@@ -156,14 +148,6 @@ async function main() {
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
-    const compare = target.closest("[data-compare]");
-    if (compare) {
-      const job = allJobs.find((j) => j.code === compare.dataset.compare);
-      const result = toggleCompare(job);
-      if (result === "full") toast(`비교함에는 최대 ${COMPARE_MAX}개까지 담을 수 있습니다. 하나를 뺀 뒤 다시 담아 주세요.`);
-      render();
-      return;
-    }
     const action = target.closest("[data-action]")?.dataset.action;
     if (action === "clear-field") { $("field").value = ""; render(); }
     if (action === "clear-exp") { $("exp").checked = false; render(); }
@@ -171,7 +155,6 @@ async function main() {
     const example = target.closest("[data-example]");
     if (example) { $("q").value = example.dataset.example; shown = PAGE; render(); }
   });
-  window.addEventListener("jobsim:compare-changed", () => render());
 }
 
 main();

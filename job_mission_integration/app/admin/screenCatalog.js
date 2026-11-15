@@ -48,7 +48,8 @@ function missionRowHtml(jobCode, mission, open, readOnly) {
   const key = String(mission?.key ?? "");
   const runId = mission?.runId;
   const added = mission?.addedByAdmin === true;
-  const openHref = `/index.html?mission=${encodeURIComponent(key)}`;
+  // resume=1: 시작 전 질문과 미션 고르기를 지나 그 미션의 수행 화면을 바로 연다
+  const openHref = `/index.html?mission=${encodeURIComponent(key)}&resume=1`;
   const runLink = runId
     ? `<a class="link" style="margin-left:10px" href="${esc(`#/runs/${encodeURIComponent(String(runId))}`)}">생성 기록 보기</a>`
     : "";
@@ -56,7 +57,7 @@ function missionRowHtml(jobCode, mission, open, readOnly) {
   const del = added
     ? `<button type="button" class="link danger" style="margin-left:12px" data-testid="catalog-delete" data-key="${esc(key)}"${readOnly ? " disabled" : ""}>삭제</button>`
     : "";
-  return `<tr class="sub" data-testid="catalog-mission" data-job="${esc(jobCode)}"${open ? "" : " hidden"}>
+  return `<tr class="sub" data-testid="catalog-mission" data-job="${esc(jobCode)}" data-mission-key="${esc(key)}"${open ? "" : " hidden"}>
     <td colspan="4"><span class="badge" style="margin-right:8px">${esc(difficultyLabel(mission?.difficulty))}</span>${esc(mission?.title ?? "")}${addedBadge}${runLink}</td>
     <td class="num" style="white-space:nowrap"><a class="link" target="_blank" rel="noopener" href="${esc(openHref)}">열기 ${icon("open", { size: 12 })}</a>${del}</td>
   </tr>`;
@@ -86,11 +87,25 @@ export function mount(view, ctx, params) {
   const seen = new Set();
   let loadSeq = 0;
   let loadedOnce = false;
+  // 주소로 받은 미션 키("카탈로그에서 보기"). 처음 그릴 때 한 번만 그 줄로 간다
+  let focusKey = typeof params?.missionKey === "string" ? params.missionKey : "";
+
+  // 그 미션의 줄을 화면 가운데로 옮기고 잠깐 밝힌다
+  function showFocused() {
+    if (!focusKey) return;
+    const key = focusKey;
+    focusKey = "";
+    const row = [...body.querySelectorAll("tr.sub")].find((node) => node.dataset.missionKey === key);
+    if (!row) return;
+    row.classList.add("focus");
+    row.scrollIntoView({ block: "center" });
+  }
 
   function render(data) {
     const jobs = Array.isArray(data?.jobs) ? data.jobs : [];
     for (const job of jobs) {
       const code = String(job?.jobCode ?? "");
+      if (focusKey && missionsOf(job).some((mission) => String(mission?.key ?? "") === focusKey)) expanded.add(code);
       if (seen.has(code)) continue;
       seen.add(code);
       if (startsOpen(job)) expanded.add(code);
@@ -105,6 +120,7 @@ export function mount(view, ctx, params) {
       : `<div class="card">${emptyLine("서비스에 올라가 있는 미션이 없습니다.")}</div>`;
     body.innerHTML = `${tilesHtml(data?.total)}${table}
       <div class="hint" style="margin-top:10px">"열기"는 사용자 화면에서 그 미션을 바로 엽니다. 삭제는 관리자 페이지에서 추가한 미션에만 있습니다.</div>`;
+    showFocused();
   }
 
   async function load() {

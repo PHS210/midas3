@@ -33,20 +33,22 @@ export const BLOCKED_REASON_TEXT = {
   NO_LINK: "이어진 능력단위가 없습니다"
 };
 
-// 근거 기록의 단계마다 누가 정했나(chain[].kind)
-export const KIND_LABELS = { data: "데이터", link_decision: "연결 판단", ai_decision: "AI 판단", rule: "규칙" };
-
 const ERROR_TEXT = {
   AUTH_REQUIRED: "관리자 암호가 필요합니다.",
   ADMIN_PASSWORD_NOT_SET: "서버에 관리자 암호가 설정돼 있지 않습니다.",
+  ADMIN_TOO_MANY_ATTEMPTS: "암호를 여러 번 틀렸습니다. 1분 뒤에 다시 해 주세요.",
+  ADMIN_PASSWORD_WRONG: "지금 암호가 올바르지 않습니다.",
+  ADMIN_PASSWORD_INVALID: "새 암호는 공백 없이 영문, 숫자, 기호로 4자 이상이어야 합니다.",
+  ADMIN_PASSWORD_SAME: "새 암호가 지금 암호와 같습니다.",
+  ADMIN_PASSWORD_RESET_ON: "서버에 암호 되돌리기 설정이 켜져 있어 바꿀 수 없습니다. 설정을 지우고 서버를 다시 켜 주세요.",
   GENERATION_ALREADY_RUNNING: "지금 만들고 있는 미션이 있습니다. 끝난 뒤에 다시 시작해 주세요.",
   GENERATION_STILL_RUNNING: "아직 만들고 있는 중이라 할 수 없습니다. 끝난 뒤에 다시 해 주세요.",
   GENERATION_DAILY_LIMIT: "오늘 만들 수 있는 건수를 모두 썼습니다.",
-  LLM_API_KEY_MISSING: "서버에 Claude API 키가 없습니다.",
-  ANTHROPIC_SDK_MISSING: "서버에 Python 패키지(anthropic)가 깔려 있지 않습니다.",
-  ANTHROPIC_AUTH_FAILED: "Claude API 키가 받아들여지지 않았습니다.",
-  ANTHROPIC_MODEL_NOT_FOUND: "설정한 모델을 찾을 수 없습니다.",
-  ANTHROPIC_PREFLIGHT_FAILED: "Claude API에 연결하지 못했습니다.",
+  LLM_API_KEY_MISSING: "서버에 AI API 키가 없습니다.",
+  ANTHROPIC_SDK_MISSING: "서버에 AI 호출에 쓰는 Python 패키지가 깔려 있지 않습니다.",
+  ANTHROPIC_AUTH_FAILED: "AI API 키가 받아들여지지 않았습니다.",
+  ANTHROPIC_MODEL_NOT_FOUND: "설정한 AI 모델을 찾을 수 없습니다.",
+  ANTHROPIC_PREFLIGHT_FAILED: "AI에 연결하지 못했습니다.",
   GENERATION_PYTHON_UNAVAILABLE: "서버에서 Python을 실행하지 못했습니다.",
   GENERATION_CONFIG_INVALID: "서버의 생성 설정 값이 올바르지 않습니다.",
   GENERATION_TIMEOUT: "시간이 너무 오래 걸려 멈췄습니다.",
@@ -108,7 +110,7 @@ export function renamePieces(text) {
   return String(text ?? "").replace(PIECE_IN_TEXT, (id) => pieceName(id));
 }
 
-// 예상 소요와 비용. 시간은 30초 단위로 반올림한다
+// 예상 소요와 비용. 시간은 30초 단위로 올림한다(예상보다 오래 걸리는 쪽보다 일찍 끝나는 쪽이 낫다). 1분이 안 되면 "1분 이내"
 export function estimateText(estimates, difficulty, review) {
   const entry = estimates && typeof estimates === "object" ? own(estimates, difficulty) : undefined;
   if (!entry?.generate) return { time: "—", cost: "—" };
@@ -121,21 +123,29 @@ export function estimateText(estimates, difficulty, review) {
 }
 
 function minutesText(totalSeconds) {
-  let seconds = Math.round(totalSeconds / 30) * 30;
-  if (seconds <= 0 && totalSeconds > 0) seconds = 30;   // 30초가 안 돼도 "약 0초"로 쓰지 않는다
+  if (totalSeconds < 60) return "1분 이내";   // 1분이 안 되면 초를 말하지 않는다
+  const seconds = Math.ceil(totalSeconds / 30) * 30;
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
-  if (!minutes) return `약 ${rest}초`;
   return rest ? `약 ${minutes}분 ${rest}초` : `약 ${minutes}분`;
 }
 
-// 오류 코드 → 글. 실패한 실행의 그 밖의 코드는 검사를 통과하지 못한 것으로 쓴다
+// 실패한 실행의 코드 가운데 서버 안에서 난 문제(검사에 걸린 것이 아닌 것)
+const RUN_INTERNAL_CODES = ["GENERATION_INTERNAL_ERROR", "GENERATION_RUN_DIR_NOT_FOUND", "GENERATION_NOT_SAVED", "RUNNER_FAILED"];
+
+// 오류 코드 → 글. 실패한 실행의 화면에는 코드를 쓰지 않는다(코드는 상세 로그에 남는다):
+// AI 호출이 실패한 것, 서버 안에서 난 문제, 그 밖(검사를 통과하지 못한 것)으로 나눠 쓴다
 export function errorText(code, options) {
   const failedRun = Boolean(options && options.failedRun);
   const known = own(ERROR_TEXT, code);
   if (known) return known;
+  if (failedRun) {
+    if (typeof code === "string" && /LLM|ANTHROPIC/.test(code)) return "AI 호출이 실패해 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요.";
+    if (RUN_INTERNAL_CODES.includes(code)) return "만드는 도중 서버에서 문제가 생겨 멈췄습니다.";
+    return "검사를 통과하지 못해 저장되지 않았습니다.";
+  }
   const tail = code === undefined || code === null || code === "" ? "" : ` (${code})`;
-  return failedRun ? `검사를 통과하지 못해 저장되지 않았습니다.${tail}` : `요청을 처리하지 못했습니다.${tail}`;
+  return `요청을 처리하지 못했습니다.${tail}`;
 }
 
 // 자료 형태 목록 → 한 줄. 좁히지 않았으면(null) 일곱 형태를 모두 쓴다
