@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="/common/site.css">
 <style>
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.stats > .card + .card{margin-top:0}
 @media (max-width:640px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .stat .n{font-size:26px;font-weight:600}
 .stat .l{font-size:13px;color:var(--t3)}
