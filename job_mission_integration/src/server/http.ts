@@ -57,7 +57,7 @@ export function apiErrorHandler(log: (message: string) => void = (m) => console.
     }
     const message = error instanceof Error ? error.message : String(error);
     log(`[api] ${req.method} ${req.path} ${message}`);
-    return sendApiError(res, 500, "INTERNAL_ERROR", "서버에서 오류가 났어. 잠시 후 다시 시도해줘.");
+    return sendApiError(res, 500, "INTERNAL_ERROR", "서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
   };
 }
 

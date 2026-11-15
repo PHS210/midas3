@@ -87,11 +87,11 @@ export function buildCardData({ state, axes, axisLabels, jobDefs, averageAxisSco
   const top = ranked[0];
   const low = ranked[ranked.length - 1];
   const similar = (state.resultSummary?.recommendations?.[code] || []).slice(0, 3).map((item) => ({ name: item.name, pct: item.similarityPct }));
-  let summary = "이번 미션에서는 역량이 뚜렷하게 드러나지 않았어.";
+  let summary = "이번 미션에서는 역량이 뚜렷하게 드러나지 않았습니다.";
   if (values[top] > 0) {
     summary = low && low !== top && values[low] < values[top]
-      ? `${withJosa(axisLabels[top], "이", "가")} 가장 잘 드러났고, ${withJosa(axisLabels[low], "은", "는")} 상대적으로 덜 드러났어.`
-      : `${withJosa(axisLabels[top], "이", "가")} 가장 잘 드러났어.`;
+      ? `${withJosa(axisLabels[top], "이", "가")} 가장 잘 드러났고, ${withJosa(axisLabels[low], "은", "는")} 상대적으로 덜 드러났습니다.`
+      : `${withJosa(axisLabels[top], "이", "가")} 가장 잘 드러났습니다.`;
   }
   return {
     jobName: job?.job_name || code,
@@ -161,14 +161,14 @@ export async function drawResultCard(data, { axes, axisLabels }) {
 
   ctx.fillStyle = COLORS.mute;
   ctx.font = `400 22px ${FONT}`;
-  wrapText(ctx, "점수는 미션 답변 기준(0~4점)이고, 유사도는 KNOW 재직자 직무 프로필과의 비교야. 답변 원문은 담지 않았어.", W - 144)
+  wrapText(ctx, "점수는 미션 답변 기준(0~4점)이고, 유사도는 KNOW 재직자 직무 프로필과의 비교입니다. 답변 원문은 포함하지 않습니다.", W - 144)
     .slice(0, 2)
     .forEach((line, i, lines) => ctx.fillText(line, 72, H - 40 - (lines.length - 1 - i) * 30));
   return canvas;
 }
 
 export function canvasToBlob(canvas) {
-  return new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("이미지를 만들지 못했어"))), "image/png"));
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("이미지를 만들지 못했습니다"))), "image/png"));
 }
 
 export async function downloadCard(canvas, fileName) {

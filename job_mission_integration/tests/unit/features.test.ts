@@ -177,7 +177,7 @@ test("결과 카드: 결과 화면처럼 미측정 축은 0으로 두고 '미측
   assert.equal(data.values.AX1, 3);
   assert.equal(data.values.AX3, 0);
   assert.equal(data.values.AX5, 0);
-  assert.equal(data.summary, "정보분석·논리가 가장 잘 드러났어.");
+  assert.equal(data.summary, "정보분석·논리가 가장 잘 드러났습니다.");
 });
 
 // ── 미션 화면의 차트: 꺾은선도 값을 숫자로 적는다 ──────────────────

@@ -823,6 +823,90 @@
 
 ---
 
+### 2026-11-15 — 카카오에서 닉네임을 받지 않음(본인 확인만 요청)
+왜:
+- 카카오에서 받는 개인정보를 회원번호 하나로 줄이기로 함. 닉네임은 서비스 안에서 쓰는 이름이라 가입 화면에서 직접 정하면 된다
+
+바뀐 것:
+- `src/lib/auth/kakao.ts`: 카카오에 요청하는 항목을 `openid profile_nickname` → `openid`로. ID 토큰에서 닉네임을 읽지 않는다(`KakaoIdentity`는 회원번호 `sub`만)
+- `src/server/routes/auth.ts`: 카카오로 처음 온 사람의 가입 화면 닉네임 칸에는 임시 이름("체험자" + 숫자 4자리)이 채워진다. 그 자리에서 고칠 수 있고, 내 기록 화면에서 바꾸는 것도 그대로다
+- `app/privacy.html`: 모으는 항목을 "카카오 회원번호"와 "닉네임(가입할 때 직접 정함)"으로 나누고, 카카오 닉네임과 프로필 사진을 받지 않는다고 적음
+- 약관·처리방침 버전을 `2026-11-15`로(`src/lib/auth/terms.ts`, `app/terms.html`, `app/privacy.html`)
+- `README.md`: 카카오 콘솔 안내에서 닉네임 동의항목 설정을 뺌
+- 카카오 개발자 콘솔에서는 닉네임 동의항목을 설정하지 않아도 된다
+
+수정 파일:
+- `src/lib/auth/kakao.ts`, `src/lib/auth/session.ts`(주석), `src/lib/auth/terms.ts`, `src/server/routes/auth.ts`, `app/privacy.html`, `app/terms.html`, `README.md`, `tests/unit/server.test.ts`
+
+검증:
+- 단위 테스트를 먼저 고쳐 실패를 본 뒤(요청 항목이 `openid`인지, 가짜 카카오 응답에 닉네임이 들어 있어도 가입 화면에는 임시 이름이 나오는지) 코드를 고쳤다
+- typecheck 통과, check:frontend 34/34, test:unit 98/98, test:e2e 4/4, test:e2e:postings 6/6, test:e2e:features 9/9, test:e2e:admin 2/2
+- 가짜 카카오 응답을 쓰는 서버를 띄워 브라우저로 확인: "카카오로 시작하기" → 가입 화면 닉네임 칸에 "체험자6749", 약관 버전 2026-11-15, 처리방침 화면의 바뀐 표
+
+---
+
+### 2026-11-15 — 개인정보 처리방침과 이용약관을 정식 문서 형식으로 다시 씀
+왜:
+- 두 문서가 구어체 요약이라 실제 서비스의 문서처럼 읽히지 않았다. 채점에 쓰는 AI 서비스는 설정에 따라 달라지므로 문서에 특정 업체 이름을 적지 않기로 함
+
+바뀐 것:
+- `app/privacy.html`: 조항 형식(제1조~제11조)과 합니다체로 다시 씀. 처리 항목과 목적, 보유 기간, 제3자 제공, 위탁 및 국외 이전, 파기, 정보주체의 권리, 쿠키, 만 14세 미만, 안전성 확보 조치, 보호책임자와 구제 기관, 변경 안내. 항목 · 보유 기간(24시간, 14일, 7일 · 30일)은 코드의 기본값과 같다
+- `app/terms.html`: 조항 형식(제1조~제8조, 부칙)과 합니다체로 다시 씀. 내용은 그대로 두고 목적, 약관의 변경, 시행일을 더함
+- `app/login.js`: 로그인 · 가입 화면의 문구(안내, 동의 항목, 버튼, 오류 안내)를 합니다체로. 가입 화면 제목은 "약관 동의", 버튼은 "동의하고 가입하기"
+- `src/server/routes/auth.ts`: 가입 화면에 그대로 나오는 서버 안내 4종(가입 정보 없음 · 동의 필요 · 닉네임 규칙 · 가입 시간 지남)을 합니다체로
+- `app/me.js`: 내 기록 화면의 문구(빈 상태 안내, 버튼, 알림, 확인 창, 회원 탈퇴 안내)를 합니다체로. 제목은 "○○ 님의 진로 기록", 묶음 제목 "쓰던 답안 이어 하기"는 "작성 중인 답안"으로. 닉네임 "변경" 버튼이 좁은 폭에서 두 줄로 꺾이지 않게 함
+- `src/server/routes/me.ts`, `src/server/routes/auth.ts`: 내 기록 화면에 나오는 서버 안내(관심 직무 · 메모 · 답안 저장 · 탈퇴 확인)를 합니다체로
+- `tests/e2e-features/features.spec.ts`: 바뀐 알림 문구와 묶음 제목에 맞춤
+- 약관 · 처리방침 문서와 로그인 · 가입 · 내 기록 화면은 사용자 화면 문구 규칙(구어체)의 예외다
+- 채점을 받는 곳을 업체 이름 대신 "답변 채점에 이용하는 외부 AI 서비스(API) 제공 사업자"로 적음. 가입 화면의 동의 문구도 "외부 AI 서비스로 전송돼"로(`app/login.js`)
+- `app/privacy.html`, `app/terms.html`의 "초안" 안내 상자를 지움. `README.md`의 화면 표에서 "초안" 표현을 뺌
+
+수정 파일:
+- `app/privacy.html`, `app/terms.html`, `app/login.js`, `app/me.js`, `src/server/routes/auth.ts`, `src/server/routes/me.ts`, `tests/e2e-features/features.spec.ts`, `README.md`
+
+검증:
+- typecheck 통과, check:frontend 34/34, test:unit 99/99, test:e2e:features 9/9
+- 브라우저로 처리방침 · 이용약관 · 로그인 · 가입 화면(동의 없이 눌렀을 때의 안내, 로그인 취소 안내 포함)을 열어 확인
+
+---
+
+### 2026-11-15 — 카카오 돌아올 주소가 빈 값으로 나가던 문제 수정
+왜:
+- `.env`에 `KAKAO_LOGIN_REDIRECT_URI=`처럼 이름만 있고 값이 비어 있으면(`.env.example`의 기본 모습) 카카오로 보내는 `redirect_uri`가 빈 값이 됐다. 안내에는 "비우면 PUBLIC_BASE_URL/auth/kakao/callback"이라고 적혀 있었다
+
+바뀐 것:
+- `src/server/config.ts`: 값이 없거나 빈 칸이면 `{PUBLIC_BASE_URL}/auth/kakao/callback`을 쓴다
+
+수정 파일:
+- `src/server/config.ts`, `tests/unit/server.test.ts`
+
+검증:
+- 단위 테스트를 먼저 더해 실패를 본 뒤 고쳤다(값 없음 · 빈 값 · 공백 · 직접 지정). test:unit 99/99, typecheck 통과
+- 실제 카카오 키를 넣은 로컬 서버(`http://localhost:8080`)에서 실제 카카오 계정으로 확인: "카카오로 시작하기" → `redirect_uri=http://localhost:8080/auth/kakao/callback`, `scope=openid`로 요청 → 카카오 동의 화면에 제공 항목이 회원번호 하나로 나옴 → 가입 화면(닉네임 칸에 임시 이름) → 가입 → 내 기록. DB의 `users`에 `provider=kakao`, 회원번호, 닉네임, 약관 버전 2026-11-15가 저장됐고 세션은 해시로 저장됐다
+- 로그아웃 뒤 다시 로그인하면 가입 화면 없이 원래 가려던 화면(`/jobs.html`)으로 돌아왔고 회원은 한 명 그대로였다
+- `KAKAO_ADMIN_KEY`를 넣고 탈퇴: `users` · `sessions`가 0건이 됐고 서버 기록에 연결 끊기 실패가 없었다. 그 뒤 다시 로그인을 누르니 카카오 동의 화면이 다시 나왔다(로그아웃 뒤 재로그인 때는 나오지 않았다). 카카오 쪽 연결이 끊긴 것이다
+
+---
+
+### 2026-11-15 — 사용자 화면 문구 전체를 합니다체로
+왜:
+- 약관 · 처리방침 · 로그인 · 가입 · 내 기록 화면만 문체가 달라져, 나머지 사용자 화면도 같은 문체로 맞추기로 함
+
+바뀐 것:
+- `AGENTS.md`: 화면 문구 규칙을 "구어체(~해, ~야)"에서 "정중한 문어체(~합니다, ~해 주세요)"로. 관리자 화면은 예외
+- 화면 문구(반말과 해요체 → 합니다체): 직무 탐색(`app/jobs.html`, `app/jobs.js`), 직무 상세(`app/job.js`), 비교(`app/compare.html`, `app/compare.js`), 미션 진행(`app/main.js`, `app/components/missionScreens.js`, `app/state/flowController.js`), 결과(`app/components/resultExtras.js`, `resultDashboard.js`, `resultSections.js`, `resultCard.js`), 채용공고(`app/components/postingsSection.js`, `postingsMap.js`), 공통(`app/common/site.js`, `app/domain/missionsCatalog.js`)
+- 제목도 바꿈: "어떤 일이 궁금해?" → "어떤 직무가 궁금하신가요?", "후보 직무를 나란히 봐" → "후보 직무 비교", "어떻게 준비해?" → "준비 방법", "결과를 이렇게 읽어줘" → "결과 해석 안내", "해보니 어땠어?" → "체험은 어떠셨나요?"
+- 역량 표시 이름(화면 `AX_META`와 서버 `missionBootstrap.ts`): "데이터로 생각해요" 등 5개를 "데이터 기반 사고 · 세밀한 관찰 · 전략적 판단 · 팀 조율과 리더십 · 배려와 소통"으로. 축 이름(`AX_LABELS`: 정보분석·논리 등)은 그대로다
+- 화면에 나오는 서버 안내: `src/server/routes/missions.ts`, `jobs.ts`, `src/server/http.ts`, `authContext.ts`, `src/lib/api/contracts.ts`, `src/lib/evaluator/fakeEvaluation.ts`, `src/lib/bootstrap/missionBootstrap.ts`
+- 그대로 둔 것: 미션 본문과 미션 제목(미션 파일의 내용), 관리자 화면, 개발자용 기록(`console.warn`, 수집기 · 스케줄러 로그), AI가 쓰는 채점 문장(채점 지시문에는 말투 지정이 없다)
+- 문구를 그대로 확인하던 테스트를 맞춤: `tests/unit/features.test.ts`, `tests/e2e-features/features.spec.ts`, `tests/e2e-postings/postings.spec.ts`. `README.md`, `docs/JOB_POSTINGS_METHOD.md`에 인용된 화면 문구도 맞춤
+
+검증:
+- typecheck 통과, check:frontend 34/34, test:unit 99/99, test:e2e 4/4, test:e2e:postings 6/6, test:e2e:features 9/9, test:e2e:admin 2/2
+- 브라우저로 직무 탐색 · 직무 상세 · 비교 · 체험 전 질문 · 미션 목록 · 미션 수행 · 결과 화면을 열어 남은 반말 문장이 없는지 훑어봄(남은 것은 미션 제목뿐)
+
+---
+
 ## Open Items (Next)
 
 0000. 관리자 미션 생성 후속(2026-11-14)
@@ -842,7 +926,7 @@
 - 따로 쓴 소개 문구가 없는 직업이 48개(`missionBootstrap.ts`의 `JOB_SUMMARY_BY_CODE`), 대표 그림이 없는 직업이 46개(`jobImages.js`의 `JOB_ART`)
 
 00. 기능 지도 후속(2026-10-30)
-- 카카오 로그인: 카카오 개발자 앱 생성·OIDC 활성화·Redirect URI 등록 후 `KAKAO_LOGIN_CLIENT_ID/SECRET`, `KAKAO_ADMIN_KEY`, `PUBLIC_BASE_URL`(HTTPS 도메인) 설정. 실제 카카오 계정으로 가입·탈퇴(연결 끊기) 확인 필요
+- 카카오 로그인: 로컬 주소에서는 실제 계정으로 가입·재로그인·탈퇴(연결 끊기)까지 확인함(2026-11-15). 운영 주소에서는 카카오 콘솔에 그 주소의 Redirect URI를 등록하고 `KAKAO_LOGIN_CLIENT_ID/SECRET`, `KAKAO_ADMIN_KEY`, `PUBLIC_BASE_URL`을 설정
 - `app/terms.html`, `app/privacy.html`의 `[배포 전에 …]` 자리(팀 대표 연락처 등)를 채우고 팀 검토
 - 고용24 상세 응답의 직무내용 필드명이 `jobCont`인지 실제 키로 확인(아니면 `parseDetailXml` 수정). 확인 전에는 요구역량이 공고 제목 위주로 계산됨
 - `data/eval/reference_answers.json`의 `human_scores`를 팀원이 채운 뒤 실제 AI 채점으로 `npm run eval:quality -- --runs=3 --fail`

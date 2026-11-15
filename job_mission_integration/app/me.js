@@ -19,12 +19,12 @@ function statsHtml() {
 
 function draftsHtml() {
   if (!data.drafts.length) return "";
-  return `<h2 class="sec-h">쓰던 답안 이어 하기</h2>${data.drafts.map((d) => `<div class="card record">
+  return `<h2 class="sec-h">작성 중인 답안</h2>${data.drafts.map((d) => `<div class="card record">
       <div><div class="title">${esc(d.mission_title)}</div><div class="meta">${esc(d.job_name)} · 마지막 저장 ${formatDate(d.updated_at, true)} · ${d.answer.length}자</div></div>
       <div class="btn-row">${d.mission_available
         ? `<a class="btn btn-sm btn-p" href="/index.html?mission=${encodeURIComponent(d.mission_key)}&resume=1#simulation">이어 쓰기</a>`
-        : `<span class="chip chip-warn">미션이 없어졌어</span>`}
-        <button class="btn btn-sm" type="button" data-del-draft="${esc(d.mission_key)}">지우기</button></div>
+        : `<span class="chip chip-warn">제공이 종료된 미션입니다</span>`}
+        <button class="btn btn-sm" type="button" data-del-draft="${esc(d.mission_key)}">삭제</button></div>
     </div>`).join("")}`;
 }
 
@@ -49,16 +49,16 @@ function interestsHtml() {
           <div style="display:flex;gap:10px;align-items:center">${jobImage({ code: i.job_code, lrcl: i.lrcl }, { height: 40 })}
             <div><a class="title" href="/job.html?code=${esc(i.job_code)}" style="color:var(--t1)">${esc(i.name)}</a><div class="meta">${esc(i.lrcl)} · 저장 ${formatDate(i.created_at)}</div></div></div>
           <div class="btn-row">
-            ${data.interests.length > 1 ? `<label class="check pick-label"><input type="checkbox" data-pick="${esc(i.job_code)}"${pickedForCompare.has(i.job_code) ? " checked" : ""}> 비교에 넣기</label>` : ""}
-            ${i.experienceable ? `<a class="btn btn-sm btn-p" href="/index.html?job=${esc(i.job_code)}#simulation">체험하기</a>` : `<span class="chip">아직 미션 없음</span>`}
+            ${data.interests.length > 1 ? `<label class="check pick-label"><input type="checkbox" data-pick="${esc(i.job_code)}"${pickedForCompare.has(i.job_code) ? " checked" : ""}> 비교 선택</label>` : ""}
+            ${i.experienceable ? `<a class="btn btn-sm btn-p" href="/index.html?job=${esc(i.job_code)}#simulation">체험하기</a>` : `<span class="chip">미션 준비 중</span>`}
             <button class="btn btn-sm" type="button" data-compare="${esc(i.job_code)}" data-name="${esc(i.name)}">${isInCompare(i.job_code) ? "비교에서 빼기" : "비교 담기"}</button>
-            <button class="btn btn-sm" type="button" data-unsave="${esc(i.job_code)}">빼기</button>
+            <button class="btn btn-sm" type="button" data-unsave="${esc(i.job_code)}">관심 해제</button>
           </div>
         </div>
         <div class="memo-row"><label class="sr-only" for="memo-${esc(i.job_code)}">메모</label><textarea class="input memo-input" id="memo-${esc(i.job_code)}" rows="2" maxlength="100" placeholder="메모 (100자)">${esc(i.memo)}</textarea><button class="btn btn-sm" type="button" data-memo="${esc(i.job_code)}">메모 저장</button></div>
       </div>`).join("")
-    : `<div class="empty">아직 저장한 관심 직무가 없어.<div class="btn-row"><a class="btn" href="/jobs.html">직무 둘러보기</a></div></div>`;
-  return `<h2 class="sec-h">관심 직무</h2>${body}${data.interests.length > 1 ? `<div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" type="button" id="compare-picked"${pickedForCompare.size ? "" : " disabled"}>고른 관심 직무 ${pickedForCompare.size}개 비교하기</button><span class="small muted">최대 3개까지 고를 수 있어.</span></div>` : ""}`;
+    : `<div class="empty">저장한 관심 직무가 없습니다.<div class="btn-row"><a class="btn" href="/jobs.html">직무 둘러보기</a></div></div>`;
+  return `<h2 class="sec-h">관심 직무</h2>${body}${data.interests.length > 1 ? `<div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" type="button" id="compare-picked"${pickedForCompare.size ? "" : " disabled"}>선택한 관심 직무 ${pickedForCompare.size}개 비교하기</button><span class="small muted">최대 3개까지 선택할 수 있습니다.</span></div>` : ""}`;
 }
 
 function recordsHtml() {
@@ -69,11 +69,11 @@ function recordsHtml() {
           <div class="title">${a.jobs.map((j) => esc(j.name)).join(", ")}</div>
           <div class="meta">${formatDate(a.completed_at || a.created_at, true)} · 미션 ${a.missions.length}개${a.rounds > 1 ? ` · ${a.rounds}회차까지 재도전` : ""} · 채점 방식: ${a.scoring_modes.map((m) => MODE_LABEL[m] || m).join(", ") || "-"}</div>
           <div class="meta">${a.missions.map((m) => esc(m.title)).join(" / ")}</div>
-          ${a.mission_outdated ? `<span class="chip chip-warn" title="체험 뒤에 미션 내용이 바뀌었어">이전 버전 미션</span>` : ""}
+          ${a.mission_outdated ? `<span class="chip chip-warn" title="체험 이후 미션 내용이 변경되었습니다">이전 버전 미션</span>` : ""}
         </div>
-        <div class="btn-row"><a class="btn btn-sm btn-p" href="/index.html?attempt=${esc(a.id)}#simulation">결과 다시 보기</a><button class="btn btn-sm" type="button" data-del-attempt="${esc(a.id)}">기록 지우기</button></div>
+        <div class="btn-row"><a class="btn btn-sm btn-p" href="/index.html?attempt=${esc(a.id)}#simulation">결과 다시 보기</a><button class="btn btn-sm" type="button" data-del-attempt="${esc(a.id)}">기록 삭제</button></div>
       </div>`).join("")
-    : `<div class="empty">아직 완료한 체험이 없어. 직무를 하나 골라 미션을 해봐.<div class="btn-row"><a class="btn btn-p" href="/index.html#simulation">체험하러 가기</a><a class="btn" href="/jobs.html">직무 둘러보기</a></div></div>`;
+    : `<div class="empty">완료한 체험이 없습니다. 직무를 선택해 미션을 체험해 보세요.<div class="btn-row"><a class="btn btn-p" href="/index.html#simulation">체험하러 가기</a><a class="btn" href="/jobs.html">직무 둘러보기</a></div></div>`;
   return `<h2 class="sec-h">완료한 체험</h2>${body}`;
 }
 
@@ -86,13 +86,13 @@ function accountHtml() {
         <dt>가입일</dt><dd>${formatDate(u.created_at)}</dd>
       </dl>
       <form id="nick-form" style="margin-top:14px"><div class="field"><label for="nick">닉네임</label>
-        <div style="display:flex;gap:8px"><input class="input" id="nick" maxlength="20" value="${esc(u.nickname)}"><button class="btn" type="submit">바꾸기</button></div></div></form>
+        <div style="display:flex;gap:8px"><input class="input" id="nick" maxlength="20" value="${esc(u.nickname)}"><button class="btn" type="submit" style="white-space:nowrap">변경</button></div></div></form>
       <div class="btn-row"><a class="btn btn-sm" href="/terms.html">이용약관</a><a class="btn btn-sm" href="/privacy.html">개인정보 처리방침</a><button class="btn btn-sm" type="button" id="logout">로그아웃</button></div>
     </div>
     <div class="card danger-zone">
-      <strong>탈퇴</strong>
-      <p class="small muted" style="margin:6px 0 10px">탈퇴하면 계정, 체험 기록, 관심 직무, 쓰던 답안이 바로 모두 지워지고 카카오 연결도 끊겨. 되돌릴 수 없어.</p>
-      <form id="withdraw-form"><div class="field"><label for="withdraw-confirm">확인을 위해 ‘탈퇴’라고 입력해줘</label>
+      <strong>회원 탈퇴</strong>
+      <p class="small muted" style="margin:6px 0 10px">탈퇴하시면 계정, 체험 기록, 관심 직무, 작성 중인 답안이 즉시 모두 삭제되고 카카오 계정 연결도 해제됩니다. 삭제된 정보는 복구할 수 없습니다.</p>
+      <form id="withdraw-form"><div class="field"><label for="withdraw-confirm">확인을 위해 ‘탈퇴’를 입력해 주세요</label>
         <input class="input" id="withdraw-confirm" autocomplete="off"></div><button class="btn btn-danger" type="submit">탈퇴하기</button></form>
     </div>`;
 }
@@ -101,8 +101,8 @@ function render() {
   const claimed = Number(qs("claimed") || 0);
   main.innerHTML = `
     <div class="eyebrow">내 기록</div>
-    <h1 class="page-h">${esc(data.user.nickname)}의 진로 기록</h1>
-    ${claimed ? `<div class="notice notice-ok">로그인 전에 한 체험 결과 ${claimed}개를 내 기록으로 옮겼어.</div>` : ""}
+    <h1 class="page-h">${esc(data.user.nickname)} 님의 진로 기록</h1>
+    ${claimed ? `<div class="notice notice-ok">로그인 전에 완료한 체험 결과 ${claimed}건을 내 기록으로 옮겼습니다.</div>` : ""}
     ${statsHtml()}
     ${draftsHtml()}
     ${recordsHtml()}
@@ -122,7 +122,7 @@ function bind() {
     try {
       await api("PATCH", "/api/me", { nickname: document.getElementById("nick").value });
       await getSession({ refresh: true });
-      toast("닉네임을 바꿨어.");
+      toast("닉네임을 변경했습니다.");
       renderHeader("me");
       await reload();
     } catch (error) {
@@ -136,10 +136,10 @@ function bind() {
   document.getElementById("withdraw-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const confirmText = document.getElementById("withdraw-confirm").value.trim();
-    if (confirmText !== "탈퇴") return toast("‘탈퇴’라고 정확히 입력해줘.");
+    if (confirmText !== "탈퇴") return toast("‘탈퇴’를 정확히 입력해 주세요.");
     try {
       const result = await api("DELETE", "/api/me", { confirm: confirmText });
-      if (result.kakao_unlink === "failed") alert("기록은 모두 지웠지만 카카오 연결 끊기는 실패했어. 카카오 계정 설정에서 직접 연결을 끊을 수 있어.");
+      if (result.kakao_unlink === "failed") alert("기록은 모두 삭제했으나 카카오 계정 연결 해제에 실패했습니다. 카카오 계정 설정에서 직접 연결을 해제하실 수 있습니다.");
       location.href = "/index.html";
     } catch (error) {
       toast(error.message);
@@ -152,7 +152,7 @@ main.addEventListener("click", async (event) => {
   if (!target) return;
   try {
     const unsave = target.closest("[data-unsave]");
-    if (unsave) { await api("DELETE", `/api/me/interests/${unsave.dataset.unsave}`); toast("관심 직무에서 뺐어."); return reload(); }
+    if (unsave) { await api("DELETE", `/api/me/interests/${unsave.dataset.unsave}`); toast("관심 직무에서 해제했습니다."); return reload(); }
     const memo = target.closest("[data-memo]");
     if (memo) {
       const code = memo.dataset.memo;
@@ -160,24 +160,24 @@ main.addEventListener("click", async (event) => {
       // 다시 그릴 때(비교 담기 등) 예전 메모로 돌아가지 않게 화면 상태도 바꾼다.
       const row = data.interests.find((i) => i.job_code === code);
       if (row) row.memo = saved?.memo ?? document.getElementById(`memo-${code}`).value;
-      return toast("메모를 저장했어.");
+      return toast("메모를 저장했습니다.");
     }
     if (target.closest("#compare-picked")) {
-      if (!pickedForCompare.size) return toast("비교할 직무를 골라줘.");
+      if (!pickedForCompare.size) return toast("비교할 직무를 선택해 주세요.");
       location.href = `/compare.html?codes=${[...pickedForCompare].join(",")}`;
       return;
     }
     const compare = target.closest("[data-compare]");
     if (compare) {
       const result = toggleCompare({ code: compare.dataset.compare, name: compare.dataset.name });
-      if (result === "full") toast(`비교는 ${COMPARE_MAX}개까지 담을 수 있어.`);
+      if (result === "full") toast(`비교함에는 최대 ${COMPARE_MAX}개까지 담을 수 있습니다.`);
       return render();
     }
     const delAttempt = target.closest("[data-del-attempt]");
     if (delAttempt) {
-      if (!confirm("이 체험 기록을 지울까? 되돌릴 수 없어.")) return;
+      if (!confirm("이 체험 기록을 삭제하시겠습니까? 삭제한 기록은 복구할 수 없습니다.")) return;
       await api("DELETE", `/api/attempts/${delAttempt.dataset.delAttempt}`);
-      toast("기록을 지웠어.");
+      toast("기록을 삭제했습니다.");
       return reload();
     }
     const delDraft = target.closest("[data-del-draft]");
@@ -193,7 +193,7 @@ main.addEventListener("change", (event) => {
   if (box.checked) {
     if (pickedForCompare.size >= COMPARE_MAX) {
       box.checked = false;
-      toast(`비교는 ${COMPARE_MAX}개까지 고를 수 있어.`);
+      toast(`비교는 최대 ${COMPARE_MAX}개까지 선택할 수 있습니다.`);
       return;
     }
     pickedForCompare.add(box.dataset.pick);
@@ -202,7 +202,7 @@ main.addEventListener("change", (event) => {
   }
   const button = document.getElementById("compare-picked");
   if (button) {
-    button.textContent = `고른 관심 직무 ${pickedForCompare.size}개 비교하기`;
+    button.textContent = `선택한 관심 직무 ${pickedForCompare.size}개 비교하기`;
     button.disabled = !pickedForCompare.size;
   }
 });
@@ -213,15 +213,15 @@ async function start() {
   initCompareTray();
   const session = await getSession();
   if (!session.authenticated) {
-    main.innerHTML = `<div class="eyebrow">내 기록</div><h1 class="page-h">로그인하면 기록을 볼 수 있어</h1>
-      <p class="page-sub">지난 체험 결과, 관심 직무, 쓰던 답안이 여기에 모여.</p>
+    main.innerHTML = `<div class="eyebrow">내 기록</div><h1 class="page-h">로그인 후 이용하실 수 있습니다</h1>
+      <p class="page-sub">지난 체험 결과, 관심 직무, 작성 중인 답안을 이곳에서 확인하실 수 있습니다.</p>
       <a class="btn btn-p" href="${esc(loginUrl("/me.html"))}">로그인</a>`;
     return;
   }
   try {
     await reload();
   } catch (error) {
-    main.innerHTML = `<div class="notice notice-err">기록을 불러오지 못했어. ${esc(error.message)}</div>`;
+    main.innerHTML = `<div class="notice notice-err">기록을 불러오지 못했습니다. ${esc(error.message)}</div>`;
   }
 }
 

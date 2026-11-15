@@ -100,7 +100,7 @@ export function normalizeNickname(raw: unknown) {
   return NICKNAME_RULE.test(value) ? value : null;
 }
 
-// 카카오 닉네임이 규칙에 맞지 않으면 가입 화면에서 바꿀 수 있게 기본값을 만든다.
+// 가입 화면 닉네임 칸의 기본값. 넘겨받은 이름이 없거나 규칙에 맞지 않으면 임시 이름을 만든다.
 export function suggestNickname(raw: unknown) {
   return normalizeNickname(raw) ?? `체험자${Math.floor(1000 + Math.random() * 9000)}`;
 }

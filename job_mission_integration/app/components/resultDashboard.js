@@ -167,14 +167,14 @@ export function renderJobIntroSection({ state, jobDefs, jobInfo, esc }) {
         <ul class="job-intro-list">${taskList}</ul>
       </div>
       <div class="job-intro-section">
-        <div class="job-intro-label">💪 이런 능력이 필요해요</div>
+        <div class="job-intro-label">💪 필요한 능력</div>
         <ul class="job-intro-list">${skillList}</ul>
       </div>
     </div>`;
   }).join("");
 
   if (!cards.trim()) return "";
-  return `<div class="rs"><div class="rs-title">이 직업은 어떤 일을 해요?</div>${cards}</div>`;
+  return `<div class="rs"><div class="rs-title">이 직업은 어떤 일을 하나요?</div>${cards}</div>`;
 }
 
 export function renderCompatibilitySection({ state, jobDefs }) {
@@ -197,7 +197,7 @@ export function renderCompatibilitySection({ state, jobDefs }) {
   const rows = items.map((item) => {
     const color = item.score >= 70 ? "var(--success)" : item.score >= 50 ? "var(--accent)" : "var(--muted)";
     const warning = item.reliable === false && item.referenceName
-      ? "<div class=\"sil-warn\">⚠️ 이 직무는 다양한 능력이 섞여 있어 점수가 크게 달라질 수 있어요.</div>"
+      ? "<div class=\"sil-warn\">⚠️ 이 직무는 다양한 능력이 섞여 있어 점수가 크게 달라질 수 있습니다.</div>"
       : "";
     const referenceText = item.referenceName
       ? `분석 기준: ${item.referenceName}${item.cluster ? ` (군집 ${item.cluster})` : ""}`
@@ -213,7 +213,7 @@ export function renderCompatibilitySection({ state, jobDefs }) {
     </div>`;
   }).join("");
 
-  return `<div class="rs"><div class="rs-title">이 직무, 나랑 얼마나 잘 맞을까?</div><div class="compat-list">${rows}</div></div>`;
+  return `<div class="rs"><div class="rs-title">이 직무와 나는 얼마나 잘 맞을까요?</div><div class="compat-list">${rows}</div></div>`;
 }
 
 export function renderRecommendationsSection({
@@ -261,13 +261,13 @@ export function renderRecommendationsSection({
           <span class="rec-jname">${recommendation.name}</span>
           <span class="rec-pct">유사도 ${similarityPct}%</span>
         </div>
-        <div style="font-size:11px;color:var(--sub);margin-bottom:8px">📊 파란 막대는 내 성향, 금색은 이 직업의 기준이에요</div>
+        <div style="font-size:11px;color:var(--sub);margin-bottom:8px">📊 파란 막대는 내 성향, 금색은 이 직업의 기준입니다</div>
         <div class="ax-bars">${bars}</div>
       </div>`;
     }).join("");
 
     const lowMessage = score < 60
-      ? `<p style="font-size:13px;color:var(--sub);margin-bottom:12px">${job.job_name} 적합도 <b style="color:var(--warn)">${score}점</b> — 같은 계열에서 더 잘 맞는 직업을 찾아봤어요.</p>`
+      ? `<p style="font-size:13px;color:var(--sub);margin-bottom:12px">${job.job_name} 적합도 <b style="color:var(--warn)">${score}점</b> — 같은 계열에서 더 잘 맞는 직업을 찾아보았습니다.</p>`
       : `<p style="font-size:13px;color:var(--sub);margin-bottom:12px">같은 직업군${meta.clusterId ? `(군집 ${meta.clusterId})` : ""} 내 유사 직업도 살펴보세요.</p>`;
 
     return `<div style="margin-bottom:28px">
@@ -277,7 +277,7 @@ export function renderRecommendationsSection({
   }).join("");
 
   if (!blocks.trim()) return "";
-  return `<div class="rs"><div class="rs-title">👀 이런 직업도 잘 맞을 것 같아요</div>${blocks}</div>`;
+  return `<div class="rs"><div class="rs-title">👀 함께 살펴볼 만한 직업</div>${blocks}</div>`;
 }
 
 export function renderGapSection({ state, jobDefs, getMissionsByJobCode, esc }) {

@@ -89,18 +89,18 @@ import {
 
 const AX_LABELS = { AX1: "정보분석·논리", AX2: "관찰·탐색", AX3: "전략·판단", AX4: "리더십·조직", AX5: "대인서비스" };
 const AX_META = {
-  AX1: { icon: "📊", name: "데이터로 생각해요", desc: "수치·자료를 분석하고 논리적으로 판단하는 능력", examples: ["데이터 비교", "원인·결과 추론", "수치 기반 판단"] },
-  AX2: { icon: "🔍", name: "꼼꼼하게 관찰해요", desc: "이상 현상을 발견하고 변수를 탐색하는 능력", examples: ["패턴 발견", "현장 관찰", "추가 조사 제안"] },
-  AX3: { icon: "♟️", name: "전략적으로 판단해요", desc: "우선순위를 정하고 선택지를 비교해 결정하는 능력", examples: ["우선순위 설정", "단기·장기 구분", "선택지 비교"] },
-  AX4: { icon: "👥", name: "팀을 이끌어요", desc: "역할을 나누고 팀·조직을 조율하는 능력", examples: ["역할 분담", "보고 구조화", "팀 단위 조율"] },
-  AX5: { icon: "💬", name: "사람을 배려해요", desc: "상대방 입장을 고려하고 공감하며 소통하는 능력", examples: ["고객 공감", "불만 원인 파악", "UX 관점 제안"] }
+  AX1: { icon: "📊", name: "데이터 기반 사고", desc: "수치·자료를 분석하고 논리적으로 판단하는 능력", examples: ["데이터 비교", "원인·결과 추론", "수치 기반 판단"] },
+  AX2: { icon: "🔍", name: "세밀한 관찰", desc: "이상 현상을 발견하고 변수를 탐색하는 능력", examples: ["패턴 발견", "현장 관찰", "추가 조사 제안"] },
+  AX3: { icon: "♟️", name: "전략적 판단", desc: "우선순위를 정하고 선택지를 비교해 결정하는 능력", examples: ["우선순위 설정", "단기·장기 구분", "선택지 비교"] },
+  AX4: { icon: "👥", name: "팀 조율과 리더십", desc: "역할을 나누고 팀·조직을 조율하는 능력", examples: ["역할 분담", "보고 구조화", "팀 단위 조율"] },
+  AX5: { icon: "💬", name: "배려와 소통", desc: "상대방 입장을 고려하고 공감하며 소통하는 능력", examples: ["고객 공감", "불만 원인 파악", "UX 관점 제안"] }
 };
 const LEVEL_INFO = [
-  { label: "근거 없음", emoji: "—", color: "var(--muted)", msg: "이 능력이 답변에서 확인되지 않았어요." },
-  { label: "기초", emoji: "🟡", color: "#c4a84a", msg: "기본적인 내용은 언급했어요. 조금 더 구체적으로 써봐요." },
-  { label: "보통", emoji: "🔵", color: "var(--accent)", msg: "괜찮은 답변이에요. 더 깊이 있으면 더 좋아요." },
-  { label: "좋음", emoji: "🟢", color: "var(--success)", msg: "잘했어요! 이 능력이 잘 드러났어요." },
-  { label: "탁월", emoji: "⭐", color: "#f5c842", msg: "아주 뛰어나요! 높은 수준의 분석력을 보여줬어요." }
+  { label: "근거 없음", emoji: "—", color: "var(--muted)", msg: "이 능력이 답변에서 확인되지 않았습니다." },
+  { label: "기초", emoji: "🟡", color: "#c4a84a", msg: "기본적인 내용은 언급했습니다. 조금 더 구체적으로 작성해 보세요." },
+  { label: "보통", emoji: "🔵", color: "var(--accent)", msg: "좋은 답변입니다. 더 깊이 있게 작성하면 더 좋습니다." },
+  { label: "좋음", emoji: "🟢", color: "var(--success)", msg: "잘하셨습니다. 이 능력이 잘 드러났습니다." },
+  { label: "탁월", emoji: "⭐", color: "#f5c842", msg: "매우 뛰어납니다. 높은 수준의 분석력을 보여 주셨습니다." }
 ];
 const RADAR_SCALE = 2.8;
 
@@ -405,7 +405,7 @@ async function openSavedAttempt(attemptId) {
     const data = await getAttemptRequest(attemptId);
     const snap = data.attempt?.result_snapshot;
     if (!snap || !Array.isArray(snap.selectedJobs)) {
-      pendingNotice = "이 체험은 결과까지 끝나지 않아서 다시 볼 결과가 없어.";
+      pendingNotice = "이 체험은 결과 단계까지 완료되지 않아 다시 볼 결과가 없습니다.";
       return;
     }
     resetState();
@@ -429,8 +429,8 @@ async function openSavedAttempt(attemptId) {
     state.screen = "result";
   } catch (error) {
     pendingNotice = error?.status === 404
-      ? "그 기록을 찾을 수 없어. 기록을 만든 계정(또는 브라우저)으로 열어줘."
-      : "기록을 불러오지 못했어. 잠시 뒤에 다시 해줘.";
+      ? "해당 기록을 찾을 수 없습니다. 기록을 만든 계정(또는 브라우저)에서 열어 주세요."
+      : "기록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
   }
 }
 
@@ -461,7 +461,7 @@ function scheduleDraftSave() {
       await saveDraftRequest(mission.key, answer.slice(0, 3000));
       setDraftStatus(`자동 저장됨 · ${formatKstDate(new Date().toISOString()).slice(-5)}`);
     } catch (_) {
-      setDraftStatus("자동 저장에 실패했어. 답안은 화면에 그대로 있어.");
+      setDraftStatus("자동 저장에 실패했습니다. 답안은 화면에 그대로 남아 있습니다.");
     }
   }, 1200);
 }
@@ -478,7 +478,7 @@ async function loadDraftIntoMission() {
       const input = document.getElementById("m-ans");
       if (input) input.value = draft.answer;
       refreshMissionNextButtonAction({ state, getCurrentMission: curMission });
-      setDraftStatus(`${formatKstDate(draft.updated_at)}에 쓰던 답안을 불러왔어.`);
+      setDraftStatus(`${formatKstDate(draft.updated_at)}에 작성하던 답안을 불러왔습니다.`);
     }
   } catch (error) {
     if (error?.status !== 404) console.warn("쓰던 답안을 불러오지 못했어", error);
@@ -495,7 +495,7 @@ function startMission() {
   state.missionStepIndex = 0;
   state.missionAnswer = "";
   state.selectedOption = null;
-  state.draftStatus = SESSION.authenticated ? "" : "로그인하면 쓰던 답안이 자동으로 저장돼.";
+  state.draftStatus = SESSION.authenticated ? "" : "로그인하시면 작성 중인 답안이 자동으로 저장됩니다.";
   void ensureAttempt();
   render();
   void loadDraftIntoMission();
@@ -518,14 +518,14 @@ function bindResultExtras() {
     const again = pick("sr-again");
     if (!interest && !difficulty && !again) {
       const box = byId("post-survey");
-      if (box && !box.querySelector(".notice")) box.insertAdjacentHTML("beforeend", `<div class="notice notice-warn" style="margin-top:10px">하나 이상 골라줘.</div>`);
+      if (box && !box.querySelector(".notice")) box.insertAdjacentHTML("beforeend", `<div class="notice notice-warn" style="margin-top:10px">하나 이상 선택해 주세요.</div>`);
       return;
     }
     const job = state.selectedJobs[0];
     state.selfReports = state.selfReports || { post: {} };
     state.selfReports.post[job] = { interest, difficulty, again, submitted: true, at: new Date().toISOString() };
     const box = byId("post-survey");
-    if (box) box.outerHTML = `<div class="notice notice-ok" id="post-survey-done">고마워! 답변을 저장했어.</div>`;
+    if (box) box.outerHTML = `<div class="notice notice-ok" id="post-survey-done">감사합니다. 응답을 저장했습니다.</div>`;
     const slot = byId("interest-change-slot");
     if (slot) slot.innerHTML = renderInterestChange({ state, jobDefs: resultJobDefs(), esc });
     void saveAttemptSnapshot();
@@ -552,7 +552,7 @@ async function openRetry(missionKey) {
   const first = roundOneLogs(state).find((log) => log.mission_key === missionKey);
   if (!first) return;
   if (!state.attemptId) {
-    showError("체험 기록이 저장되지 않아서 해설을 열 수 없어. 미션을 다시 해줘.");
+    showError("체험 기록이 저장되지 않아 해설을 열 수 없습니다. 미션을 다시 진행해 주세요.");
     return;
   }
   if (button) {
@@ -570,7 +570,7 @@ async function openRetry(missionKey) {
       button.disabled = false;
       button.textContent = "해설 보기";
     }
-    showError(error?.message || "해설을 불러오지 못했어.");
+    showError(error?.message || "해설을 불러오지 못했습니다.");
   }
 }
 
@@ -591,7 +591,7 @@ function bindRetryScreen() {
     const errorBox = byId("retry-error");
     if (!mission) return;
     if (answer.trim().length <= 10) {
-      if (errorBox) errorBox.innerHTML = `<div class="notice notice-warn" style="margin-top:10px">10자 넘게 써줘.</div>`;
+      if (errorBox) errorBox.innerHTML = `<div class="notice notice-warn" style="margin-top:10px">10자 이상 작성해 주세요.</div>`;
       return;
     }
     const button = byId("btn-retry-submit");
@@ -617,7 +617,7 @@ function bindRetryScreen() {
         button.disabled = false;
         button.textContent = "다시 제출";
       }
-      if (errorBox) errorBox.innerHTML = `<div class="notice notice-err" style="margin-top:10px">채점에 실패했어. 잠시 뒤에 다시 해줘. (${esc(error?.message || error)})</div>`;
+      if (errorBox) errorBox.innerHTML = `<div class="notice notice-err" style="margin-top:10px">채점에 실패했습니다. 잠시 후 다시 시도해 주세요. (${esc(error?.message || error)})</div>`;
     }
   });
 }
@@ -693,7 +693,7 @@ async function applyUrlParams() {
   if (missionKey) {
     const mission = ALL_MISSIONS.find((m) => m.key === missionKey);
     if (!mission) {
-      pendingNotice = "그 미션은 지금 체험할 수 없어. 다른 직무를 골라줘.";
+      pendingNotice = "해당 미션은 현재 체험할 수 없습니다. 다른 직무를 선택해 주세요.";
       return true;
     }
     state.selectedJobs = [mission.job_code];
@@ -708,7 +708,7 @@ async function applyUrlParams() {
     state.preqIndex = 0;
     state.screen = "preq";
   } else {
-    pendingNotice = "이 직무는 아직 체험 미션이 없어. 체험할 수 있는 직무를 골라줘.";
+    pendingNotice = "이 직무는 아직 체험 미션이 준비되지 않았습니다. 체험할 수 있는 직무를 선택해 주세요.";
   }
   return true;
 }
@@ -718,7 +718,7 @@ async function bootstrap() {
   APP.innerHTML = `<div class="boot-state">
     <div class="loading-dots"><span></span><span></span><span></span></div>
     <div class="boot-msg">미션을 불러오는 중…</div>
-    <div class="boot-sub">missions/index.json 과 각 미션 JSON 을 가져오고 있어요.</div>
+    <div class="boot-sub">missions/index.json 과 각 미션 JSON 을 가져오고 있습니다.</div>
   </div>`;
   const sessionPromise = getAuthSession();
   try {

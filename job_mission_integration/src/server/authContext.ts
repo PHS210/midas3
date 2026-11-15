@@ -59,7 +59,7 @@ export function ensureAnonId(res: express.Response, config: ServerConfig) {
 }
 
 export const requireUser: express.RequestHandler = (_req, res, next) => {
-  if (!getAuth(res).user) return sendApiError(res, 401, "LOGIN_REQUIRED", "로그인이 필요해.");
+  if (!getAuth(res).user) return sendApiError(res, 401, "LOGIN_REQUIRED", "로그인이 필요합니다.");
   return next();
 };
 
@@ -70,5 +70,5 @@ export const requireCsrf: express.RequestHandler = (req, res, next) => {
   if (!auth.session) return next();
   const provided = req.header("x-csrf-token") ?? "";
   if (provided && provided === auth.session.csrf_token) return next();
-  return sendApiError(res, 403, "CSRF_TOKEN_INVALID", "보안 토큰이 맞지 않아. 페이지를 새로고침한 뒤 다시 시도해줘.");
+  return sendApiError(res, 403, "CSRF_TOKEN_INVALID", "보안 토큰이 일치하지 않습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.");
 };
