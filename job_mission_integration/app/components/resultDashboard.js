@@ -101,8 +101,8 @@ export function renderRadarSection({
     const textAnchor = labelX < centerX - 8 ? "end" : labelX > centerX + 8 ? "start" : "middle";
     const value = absolute[axis.key]?.pct || 0;
     const [profileX, profileY] = point(radius * (absolute[axis.key]?.ratio || 0) + 14, index);
-    return `<text x="${labelX}" y="${labelY + 4}" text-anchor="${textAnchor}" style="fill:#f7f8f8;font-size:12px;font-weight:600">${axis.label}</text>
-    <text x="${profileX}" y="${profileY + 4}" text-anchor="middle" style="fill:#7b83e0;font-size:11px;font-weight:700">${value}%</text>`;
+    return `<text class="radar-lbl" x="${labelX}" y="${labelY + 4}" text-anchor="${textAnchor}">${axis.label}</text>
+    <text class="radar-val" x="${profileX}" y="${profileY + 4}" text-anchor="middle">${value}%</text>`;
   }).join("");
 
   const bestWeights = bestMatch?.referenceWeights || null;
@@ -139,7 +139,7 @@ export function renderRadarSection({
   <div class="rs-title">나의 5가지 사고 스타일</div>
   <div class="axis-note">각 축은 독립적인 절대값(0~100)으로 표시됩니다. 축 퍼센트를 합산하지 않습니다.</div>
   ${measuredAxes.length < axes.length ? `<div class="axis-note">⚠️ AX4/AX5처럼 일부 축은 이번 미션 세트에서 미측정일 수 있습니다.</div>` : ""}
-  <div class="radar-wrap"><svg width="370" height="335" viewBox="0 0 370 335" style="overflow:visible">
+  <div class="radar-wrap"><svg class="radar-main" width="100%" viewBox="-45 0 460 335" style="max-width:460px;overflow:visible">
     ${grid}${axisLines}${myPolygon}${labels}
   </svg></div><div class="axis-score-grid">${scoreRows}</div></div>`;
 }

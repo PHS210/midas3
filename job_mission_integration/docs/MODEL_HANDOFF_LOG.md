@@ -938,6 +938,26 @@
 - typecheck 통과, check:frontend 32/32, test:unit 99/99, test:e2e 4/4, test:e2e:postings 6/6, test:e2e:features 9/9, test:e2e:admin 2/2
 - 켜 둔 서버에서 앞으로 3단계, "이전" 3단계, 채점 대기, 결과, "처음부터 다시"를 눌러 가며 체험 영역 위치를 잼(모두 화면 위쪽 64px, 결과는 맨 위). 카드 선택 때는 움직이지 않음
 
+### 2026-11-15 — 사용 중 눈에 띄던 문제 4가지 정리
+왜:
+- PC와 모바일 크기로 체험·탐색·로그인·내 기록 흐름을 끝까지 눌러 보며 찾은, 화면에서 바로 보이는 문제를 고침
+
+바뀐 것(커밋을 항목별로 나눔):
+1. 결과 화면의 "함께 살펴볼 만한 직업"과 결과 카드의 "결이 비슷한 직무" 목록을 뺌
+   - 미션 하나로는 5개 역량 중 2개 정도만 측정되는데, 추천은 그 비율만 비교해서 관련 없는 직업 3개가 모두 "유사도 100%"로 나왔다
+   - `app/main.js`, `app/components/resultDashboard.js`(`renderRecommendationsSection` 삭제), `app/components/resultCard.js`(목록 삭제, 그래프와 요약 위치 조정), `app/components/resultExtras.js`(카드 설명 문구)
+   - 서버 계산(`src/lib/recommendation/engine.ts`의 `recommendations`)은 그대로 둠. 고른 직무의 점수 계산과 같은 곳이라 건드리지 않았다
+2. 직무 탐색 검색: `data/jobs/aliases.json`에 흔한 말(코딩, 프로그래밍, AI, 인공지능, 머신러닝, VR, 해킹 등)을 추가하고 `npm run jobs:build`로 `data/jobs/index.json`을 다시 만듦. `app/common/jobSearch.js`는 별칭과 똑같은 말(75점)이 이름에 포함된 경우(70점)보다 먼저 나오게 함("마케터" → 광고·홍보·마케팅전문가가 텔레마케터보다 먼저). `tests/unit/features.test.ts`에 확인 2줄 추가
+3. 답을 쓰던 중 새로고침·뒤로 가기·다른 페이지 이동을 누르면 브라우저가 한 번 묻게 함(`beforeunload`): `app/main.js`
+   - 묻는 경우: 로그인하지 않고 미션 답을 쓰던 중, 재도전 답을 고치던 중, 채점 대기 중. 로그인한 사용자의 미션 답은 자동 저장되므로 묻지 않는다
+   - 나가면 답이 사라지는 것은 그대로다. 진행 상태를 저장해 되살리는 것은 하지 않았다
+4. 좁은 화면(768px 이하): 그래프 양옆 이름이 잘리던 것을 그림 영역에 좌우 여백을 넣어 고침(`app/components/resultDashboard.js`, `app/components/radar.js`, 글자 스타일은 `app/index.html`의 `.radar-lbl` 등). 미션 화면에 답 입력 영역이 화면 밖일 때만 뜨는 "답변 쓰러 가기" 버튼 추가(`app/components/missionScreens.js`, `app/main.js`의 `bindAnswerJump`)
+
+검증:
+- typecheck 통과, check:frontend 32/32, test:unit 99/99, test:e2e 4/4, test:e2e:postings 6/6, test:e2e:features 9/9, test:e2e:admin 2/2
+- 켜 둔 서버에서 PC(1280px)와 모바일(375px) 크기로 확인: 추천 구역과 "유사도 100%" 없음, 그래프 글자 잘림 없음, 결과 카드 PNG, 답 쓰던 중 새로고침 때 확인창(답이 비었거나 결과 화면이면 없음), "답변 쓰러 가기"(모바일에서만 보이고 누르면 입력칸으로), 검색 "마케터"·"코딩"·"AI"
+- 직무 목록은 서버가 시작할 때 읽으므로 사전을 고친 뒤에는 서버를 다시 켜야 검색에 반영된다
+
 ---
 
 ## Open Items (Next)

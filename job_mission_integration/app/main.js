@@ -177,6 +177,7 @@ function render({ scroll = true } = {}) {
     if (state.screen === "result" && scroll) window.scrollTo({ top: 0, behavior: "smooth" });
     else if (state.screen !== "result" && scroll && screenChanged) scrollToSimulation();
     bindEvents();
+    bindAnswerJump();
     if (state.screen === "result") {
       mountPostings();
       mountResultExtras();
@@ -184,6 +185,22 @@ function render({ scroll = true } = {}) {
     }
     if (state.screen === "retry") bindRetryScreen();
   }
+}
+
+// 좁은 화면의 미션 단계: 답 입력 영역이 화면 밖일 때만 '답변 쓰러 가기' 버튼을 보인다(버튼이 뜨는 화면 폭은 CSS가 정한다).
+let answerJumpObserver = null;
+function bindAnswerJump() {
+  answerJumpObserver?.disconnect();
+  answerJumpObserver = null;
+  const button = document.getElementById("btn-ans-jump");
+  const panel = APP.querySelector(".mis-right");
+  if (!button || !panel || typeof IntersectionObserver === "undefined") return;
+  answerJumpObserver = new IntersectionObserver(([entry]) => { button.hidden = entry.isIntersecting; });
+  answerJumpObserver.observe(panel);
+  button.addEventListener("click", () => {
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("m-ans")?.focus({ preventScroll: true });
+  });
 }
 
 function mountPostings() {
