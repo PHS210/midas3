@@ -343,7 +343,7 @@ export async function mountRequirementCompare({ root, state, axes, axisLabels, p
 // ── 결과 카드(U03) 버튼 ─────────────────────────────────
 export function renderCardActions() {
   return `<div class="rs" id="result-card-actions"><div class="rs-title">결과 카드로 남기기</div>
-    <p class="axis-note">레이더 차트, 비슷한 직무 3개, 한 줄 요약만 담습니다. 답변 원문은 포함하지 않습니다.</p>
+    <p class="axis-note">레이더 차트와 한 줄 요약만 담습니다. 답변 원문은 포함하지 않습니다.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p" id="btn-card-png" type="button">PNG로 저장</button><button class="btn btn-g" id="btn-card-print" type="button">인쇄</button></div>
     <img id="result-card-print" alt="" hidden></div>`;
 }

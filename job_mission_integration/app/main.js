@@ -59,8 +59,7 @@ import {
   renderCompatibilitySection,
   renderGapSection,
   renderJobIntroSection,
-  renderRadarSection,
-  renderRecommendationsSection
+  renderRadarSection
 } from "./components/resultDashboard.js";
 import {
   mountPostingsSection,
@@ -262,7 +261,7 @@ function rResult() {
   ${rRadar()}${renderInterpretation(extras)}
   ${renderPostSurvey(extras)}<div id="interest-change-slot">${renderInterestChange(extras)}</div>
   ${rEvidence()}${renderEvidenceHighlight(extras)}
-  ${rJobIntro()}${rCompat()}${rQuad()}${rRec()}${rGap()}${rEvaluationLogSummary()}
+  ${rJobIntro()}${rCompat()}${rQuad()}${rGap()}${rEvaluationLogSummary()}
   ${renderRetrySection(extras)}${renderNextMissions(extras)}
   ${renderPostingsSectionShell()}
   ${renderRequirementShell()}${renderStrengthShell()}
@@ -327,16 +326,6 @@ function rQuad() {
     selectedJobs: state.selectedJobs,
     jobDefs: resultJobDefs(),
     jobInsights: state.resultSummary?.jobInsights || {}
-  });
-}
-
-function rRec() {
-  return renderRecommendationsSection({
-    state,
-    jobDefs: resultJobDefs(),
-    axes: AXES,
-    axisLabels: AX_LABELS,
-    radarScale: RADAR_SCALE
   });
 }
 

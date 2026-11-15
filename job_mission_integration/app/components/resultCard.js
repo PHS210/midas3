@@ -1,4 +1,4 @@
-/* 결과 카드(U03): 캔버스에 레이더·비슷한 직무 3개·한 줄 요약을 그려 PNG로 저장하거나 인쇄한다.
+/* 결과 카드(U03): 캔버스에 레이더와 한 줄 요약을 그려 PNG로 저장하거나 인쇄한다.
    답변 원문과 근거 인용은 넣지 않는다(공유될 수 있는 이미지라서). */
 
 const W = 1080;
@@ -86,7 +86,6 @@ export function buildCardData({ state, axes, axisLabels, jobDefs, averageAxisSco
   const ranked = (measuredSet.length ? measuredSet : axes).slice().sort((a, b) => values[b] - values[a]);
   const top = ranked[0];
   const low = ranked[ranked.length - 1];
-  const similar = (state.resultSummary?.recommendations?.[code] || []).slice(0, 3).map((item) => ({ name: item.name, pct: item.similarityPct }));
   let summary = "이번 미션에서는 역량이 뚜렷하게 드러나지 않았습니다.";
   if (values[top] > 0) {
     summary = low && low !== top && values[low] < values[top]
@@ -99,7 +98,6 @@ export function buildCardData({ state, axes, axisLabels, jobDefs, averageAxisSco
     measured: measuredSet,
     compatibility: state.compatibility?.[code] ?? null,
     values,
-    similar,
     summary,
     date: new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())
   };
@@ -128,36 +126,16 @@ export async function drawResultCard(data, { axes, axisLabels }) {
   ctx.font = `500 30px ${FONT}`;
   ctx.fillText(`미션 ${data.missionCount}개${data.compatibility !== null ? ` · 직무 유사도 ${data.compatibility}%` : ""}`, 72, 238);
 
-  drawRadar(ctx, { cx: W / 2, cy: 560, r: 230, axes, labels: axisLabels, values: data.values, measured: data.measured || axes });
+  drawRadar(ctx, { cx: W / 2, cy: 620, r: 270, axes, labels: axisLabels, values: data.values, measured: data.measured || axes });
 
   // 한 줄 요약
   ctx.fillStyle = COLORS.panel;
-  ctx.fillRect(72, 880, W - 144, 132);
+  ctx.fillRect(72, 1040, W - 144, 132);
   ctx.fillStyle = COLORS.text;
   ctx.font = `600 32px ${FONT}`;
   ctx.textAlign = "left";
-  wrapText(ctx, data.summary, W - 200).slice(0, 2).forEach((line, i) => ctx.fillText(line, 100, 934 + i * 44));
-
-  // 비슷한 직무 3개
-  ctx.fillStyle = COLORS.mute;
-  ctx.font = `600 28px ${FONT}`;
-  ctx.fillText("내 결과와 결이 비슷한 직무", 72, 1076);
-  const list = data.similar.length ? data.similar : [{ name: "추천 자료 없음", pct: null }];
-  list.forEach((item, i) => {
-    const y = 1130 + i * 52;
-    ctx.fillStyle = COLORS.accent;
-    ctx.fillText(`${i + 1}`, 72, y);
-    ctx.fillStyle = COLORS.text;
-    ctx.font = `500 32px ${FONT}`;
-    ctx.fillText(item.name, 112, y);
-    if (item.pct !== null && item.pct !== undefined) {
-      ctx.textAlign = "right";
-      ctx.fillStyle = COLORS.sub;
-      ctx.fillText(`${item.pct}%`, W - 72, y);
-      ctx.textAlign = "left";
-    }
-    ctx.font = `600 28px ${FONT}`;
-  });
+  ctx.textBaseline = "alphabetic";
+  wrapText(ctx, data.summary, W - 200).slice(0, 2).forEach((line, i) => ctx.fillText(line, 100, 1094 + i * 44));
 
   ctx.fillStyle = COLORS.mute;
   ctx.font = `400 22px ${FONT}`;
