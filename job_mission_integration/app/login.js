@@ -8,32 +8,32 @@ const returnTo = (() => {
 
 // 로그인 취소·실패 안내(U01-8)
 const ERROR_MESSAGES = {
-  cancelled: "카카오 로그인을 취소했어. 다시 하려면 아래 버튼을 눌러줘.",
-  failed: "로그인 중에 문제가 생겼어. 잠시 후 다시 시도해줘. 계속되면 다른 브라우저로 해봐.",
-  expired: "로그인 시간이 지났어. 처음부터 다시 시도해줘.",
-  kakao_unavailable: "카카오 로그인이 아직 설정되지 않았어. 운영자에게 알려줘."
+  cancelled: "카카오 로그인이 취소되었습니다. 다시 시도하시려면 아래 버튼을 눌러 주세요.",
+  failed: "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요. 문제가 계속되면 다른 브라우저에서 시도해 주세요.",
+  expired: "로그인 유효 시간이 지났습니다. 처음부터 다시 시도해 주세요.",
+  kakao_unavailable: "현재 카카오 로그인을 이용할 수 없습니다. 운영자에게 문의해 주세요."
 };
 
 function renderLogin(session) {
   const error = qs("error");
   const anon = session.anonymous_results || 0;
   main.innerHTML = `
-    <div class="eyebrow">로그인</div>
-    <h1 class="page-h">기록을 남기려면 로그인해줘</h1>
-    <p class="page-sub">직무 탐색·비교·체험은 로그인 없이 할 수 있어. 관심 직무 저장과 내 기록 보기에만 로그인이 필요해.</p>
+    <div class="eyebrow">계정</div>
+    <h1 class="page-h">로그인</h1>
+    <p class="page-sub">직무 탐색, 비교, 체험은 로그인 없이 이용하실 수 있습니다. 관심 직무 저장과 내 기록 기능을 이용하시려면 로그인이 필요합니다.</p>
     ${error ? `<div class="notice notice-err" role="alert">${esc(ERROR_MESSAGES[error] || ERROR_MESSAGES.failed)}</div>` : ""}
-    ${anon ? `<div class="notice notice-ok">이 브라우저에서 로그인 전에 한 체험 결과 ${anon}개가 있어. 로그인하면 내 기록으로 옮겨줄게.</div>` : ""}
+    ${anon ? `<div class="notice notice-ok">이 브라우저에서 로그인 전에 완료한 체험 결과가 ${anon}건 있습니다. 로그인하시면 내 기록으로 옮겨 드립니다.</div>` : ""}
     <div class="card">
       ${session.providers?.kakao
         ? `<a class="btn btn-kakao" style="width:100%" href="/auth/kakao/start?return=${encodeURIComponent(returnTo)}">카카오로 시작하기</a>
-           <p class="small muted" style="margin-top:10px">처음이면 약관 동의와 만 14세 이상 확인을 거쳐 가입돼. 비밀번호는 따로 만들지 않아.</p>`
-        : `<p class="muted">카카오 로그인이 아직 설정되지 않았어.</p>`}
+           <p class="small muted" style="margin-top:10px">처음 이용하시는 경우 약관 동의와 만 14세 이상 확인을 거쳐 가입됩니다. 별도의 비밀번호는 만들지 않습니다.</p>`
+        : `<p class="muted">현재 카카오 로그인을 이용할 수 없습니다.</p>`}
     </div>
     ${session.providers?.dev ? `<div class="card" style="margin-top:12px">
       <form id="dev-form">
-        <p class="small muted" style="margin-bottom:8px">개발·테스트용 로그인이야. 운영 서버에서는 보이지 않아.</p>
+        <p class="small muted" style="margin-bottom:8px">개발·테스트용 로그인입니다. 운영 서버에서는 표시되지 않습니다.</p>
         <div class="field"><label for="dev-id">테스트 계정 ID(영문·숫자)</label><input class="input" id="dev-id" required pattern="[A-Za-z0-9_\\-]{2,32}" value="tester"></div>
-        <button class="btn" type="submit">개발용으로 로그인</button>
+        <button class="btn" type="submit">개발용 로그인</button>
       </form></div>` : ""}
     <p class="small muted" style="margin-top:16px"><a href="/terms.html">이용약관</a> · <a href="/privacy.html">개인정보 처리방침</a></p>`;
 
@@ -64,21 +64,21 @@ async function renderSignup() {
   try {
     pending = await api("GET", "/api/auth/signup");
   } catch (error) {
-    main.innerHTML = `<div class="notice notice-err" role="alert">${esc(error.message)}</div><a class="btn" href="/login.html">다시 로그인</a>`;
+    main.innerHTML = `<div class="notice notice-err" role="alert">${esc(error.message)}</div><a class="btn" href="/login.html">다시 로그인하기</a>`;
     return;
   }
   main.innerHTML = `
-    <div class="eyebrow">처음 오셨네</div>
-    <h1 class="page-h">가입을 마무리해줘</h1>
-    <p class="page-sub">아래 세 가지에 모두 동의해야 가입할 수 있어.</p>
+    <div class="eyebrow">회원가입</div>
+    <h1 class="page-h">약관 동의</h1>
+    <p class="page-sub">서비스 이용을 위해 아래 필수 항목에 모두 동의해 주세요.</p>
     <form class="card" id="signup-form" novalidate>
       <div class="field"><label for="nickname">닉네임 (2~20자)</label>
         <input class="input" id="nickname" maxlength="20" required value="${esc(pending.nickname)}"></div>
-      <label class="check"><input type="checkbox" id="agree-terms" required> <span>[필수] <a href="/terms.html" target="_blank" rel="noopener">이용약관</a>에 동의해.</span></label>
-      <label class="check"><input type="checkbox" id="agree-privacy" required> <span>[필수] <a href="/privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a>에 동의해. 체험 답변은 채점을 위해 OpenAI(미국)로 전송돼.</span></label>
-      <label class="check"><input type="checkbox" id="confirm-age" required> <span>[필수] 만 14세 이상이야.</span></label>
+      <label class="check"><input type="checkbox" id="agree-terms" required> <span>[필수] <a href="/terms.html" target="_blank" rel="noopener">이용약관</a>에 동의합니다.</span></label>
+      <label class="check"><input type="checkbox" id="agree-privacy" required> <span>[필수] <a href="/privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a>에 동의합니다. 체험 답변은 채점을 위해 외부 AI 서비스로 전송됩니다.</span></label>
+      <label class="check"><input type="checkbox" id="confirm-age" required> <span>[필수] 만 14세 이상입니다.</span></label>
       <div id="signup-error"></div>
-      <div class="btn-row" style="margin-top:14px"><button class="btn btn-p" type="submit">가입하고 시작하기</button><a class="btn" href="/login.html">취소</a></div>
+      <div class="btn-row" style="margin-top:14px"><button class="btn btn-p" type="submit">동의하고 가입하기</button><a class="btn" href="/login.html">취소</a></div>
     </form>
     <p class="small muted" style="margin-top:10px">약관 버전 ${esc(pending.terms_version)}</p>`;
 
@@ -92,7 +92,7 @@ async function renderSignup() {
       confirmAge14: document.getElementById("confirm-age").checked
     };
     if (!body.agreeTerms || !body.agreePrivacy || !body.confirmAge14) {
-      errorBox.innerHTML = `<div class="notice notice-err" role="alert">필수 항목에 모두 동의해줘. 만 14세 미만은 가입할 수 없어.</div>`;
+      errorBox.innerHTML = `<div class="notice notice-err" role="alert">필수 항목에 모두 동의해 주세요. 만 14세 미만은 가입하실 수 없습니다.</div>`;
       return;
     }
     try {
@@ -114,7 +114,7 @@ async function start() {
   if (qs("step") === "signup") return renderSignup();
   const session = await getSession();
   if (session.authenticated && !qs("error")) {
-    main.innerHTML = `<div class="notice notice-ok">이미 ${esc(session.user.nickname)}(으)로 로그인했어.</div><a class="btn btn-p" href="${esc(returnTo)}">계속하기</a>`;
+    main.innerHTML = `<div class="notice notice-ok">이미 ${esc(session.user.nickname)} 님으로 로그인되어 있습니다.</div><a class="btn btn-p" href="${esc(returnTo)}">계속하기</a>`;
     return;
   }
   renderLogin(session);

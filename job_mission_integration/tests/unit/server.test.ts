@@ -4,6 +4,7 @@ import { Client, startTestServer } from "./helpers/testServer.js";
 import { checkIdTokenPayload, KakaoAuthError } from "../../src/lib/auth/kakao.js";
 import { hashToken, safeReturnTo } from "../../src/lib/auth/session.js";
 import { pythonSpawnEnv } from "../../src/lib/adminGeneration/commands.js";
+import { loadServerConfig } from "../../src/server/config.js";
 
 const MISSION_KEY = "jobsim_service_v1__mission_K000001080_easy_001";
 const GOOD_ANSWER = "3월을 색으로 강조해야 합니다. 2월 49,000명에서 3월 41,000명으로 8,000명 줄어 전월 대비 감소폭이 가장 크니, 차트의 수치부터 다시 확인하겠습니다.";
@@ -172,15 +173,20 @@ test("카카오 로그인: 시작 → 콜백 → 가입 → 재로그인, 취소
     assert.equal(authorize.host, "kauth.kakao.com");
     assert.equal(authorize.searchParams.get("client_id"), "kakao-client");
     assert.equal(authorize.searchParams.get("code_challenge_method"), "S256");
+    // 카카오에는 본인 확인만 요청한다. 닉네임은 요청하지 않는다.
+    assert.equal(authorize.searchParams.get("scope"), "openid");
     nonce = authorize.searchParams.get("nonce")!;
     const state = authorize.searchParams.get("state")!;
 
     const callback = await c.get(`/auth/kakao/callback?code=abc&state=${state}`);
     assert.equal(callback.status, 303);
     assert.equal(callback.headers.get("location"), "/login.html?step=signup");
-    assert.equal((await c.get("/api/auth/signup")).json.nickname, "카카오친구");
-    await c.post("/api/auth/signup", { nickname: "카카오친구", agreeTerms: true, agreePrivacy: true, confirmAge14: true });
-    assert.equal((await c.refreshCsrf()).user.provider, "kakao");
+    // 카카오가 닉네임을 보내더라도 쓰지 않는다. 가입 화면에는 임시 이름이 채워지고 사용자가 직접 정한다.
+    assert.match((await c.get("/api/auth/signup")).json.nickname, /^체험자\d{4}$/);
+    await c.post("/api/auth/signup", { nickname: "직접정한이름", agreeTerms: true, agreePrivacy: true, confirmAge14: true });
+    const joined = await c.refreshCsrf();
+    assert.equal(joined.user.provider, "kakao");
+    assert.equal(joined.user.nickname, "직접정한이름");
 
     // 같은 계정으로 다시 로그인: 가입 없이 원래 페이지로
     const c2 = new Client(srv.base);
@@ -213,6 +219,16 @@ test("카카오 로그인: 시작 → 콜백 → 가입 → 재로그인, 취소
   } finally {
     await srv.close();
   }
+});
+
+test("카카오 돌아올 주소: 설정을 비워두면 PUBLIC_BASE_URL 기준 기본 주소를 쓴다", () => {
+  const uri = (env: Record<string, string>) => loadServerConfig(env as NodeJS.ProcessEnv).auth.kakaoRedirectUri;
+  const base = { PUBLIC_BASE_URL: "http://localhost:8080" };
+  assert.equal(uri(base), "http://localhost:8080/auth/kakao/callback");
+  // .env 예시처럼 이름만 있고 값이 빈 경우
+  assert.equal(uri({ ...base, KAKAO_LOGIN_REDIRECT_URI: "" }), "http://localhost:8080/auth/kakao/callback");
+  assert.equal(uri({ ...base, KAKAO_LOGIN_REDIRECT_URI: "  " }), "http://localhost:8080/auth/kakao/callback");
+  assert.equal(uri({ ...base, KAKAO_LOGIN_REDIRECT_URI: "https://jobsim.example/cb" }), "https://jobsim.example/cb");
 });
 
 test("카카오 ID 토큰 확인: 발급자·대상·nonce·만료", () => {

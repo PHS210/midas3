@@ -43,7 +43,7 @@ function buildDailyDescription({ jobName, domain, missions, avgMinutes }) {
     ? `${domain} 데이터를 다루며`
     : `${jobName} 관련 데이터를 다루며`;
 
-  return `${domainPrefix} "${titleText}" 같은 과제를 수행해요. 보통 ${flowText} 순서로 진행하고, 미션 1개 기준 약 ${avgMinutes}분 정도의 분석·정리 작업이 필요해요.`;
+  return `${domainPrefix} "${titleText}" 같은 과제를 수행합니다. 보통 ${flowText} 순서로 진행하고, 미션 1개 기준 약 ${avgMinutes}분 정도의 분석·정리 작업이 필요합니다.`;
 }
 
 function buildJobSummary({ jobCode, jobName, jobField }) {

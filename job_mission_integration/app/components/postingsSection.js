@@ -93,7 +93,7 @@ function skeletonHtml() {
     <div class="pst-sk pst-sk-line"></div>
     <div class="pst-sk pst-sk-line short"></div>
     <div class="pst-sk pst-sk-map"></div>
-  </div><span class="pst-sr">채용공고를 불러오는 중이야.</span>`;
+  </div><span class="pst-sr">채용공고를 불러오는 중입니다.</span>`;
 }
 
 function messageHtml(text, { retry = false } = {}) {
@@ -109,7 +109,7 @@ function sourceHtml(data) {
   } else if (data.query?.occupation?.length) {
     parts.push(`직종 ${data.query.occupation.map((o) => `${o.code} ${o.name}`).join(", ")}`);
   }
-  return `<p class="pst-source">${esc(parts.join(" · "))}. 지원 전에 공고 원문을 꼭 확인해.</p>`;
+  return `<p class="pst-source">${esc(parts.join(" · "))}. 지원 전에 공고 원문을 반드시 확인해 주세요.</p>`;
 }
 
 function summaryHtml(data, enabledTypes) {
@@ -118,12 +118,12 @@ function summaryHtml(data, enabledTypes) {
   const total = c.kept;
   const pct = total ? Math.round((c.metro / total) * 100) : 0;
   const sentences = [
-    `${period} 고용24에 올라온 ${esc(data.job_name)} 공고 중 지금 지원할 수 있는 건 <strong>${total}건</strong>이야. 수도권 ${c.metro}건(${pct}%), 비수도권 ${c.nonmetro}건이야.`
+    `${period} 고용24에 올라온 ${esc(data.job_name)} 공고 중 현재 지원할 수 있는 공고는 <strong>${total}건</strong>입니다. 수도권 ${c.metro}건(${pct}%), 비수도권 ${c.nonmetro}건입니다.`
   ];
-  if (c.region_unknown > 0) sentences.push(`지역을 알 수 없는 공고는 ${c.region_unknown}건이야.`);
+  if (c.region_unknown > 0) sentences.push(`지역을 알 수 없는 공고는 ${c.region_unknown}건입니다.`);
   if (c.nonmetro > 0) {
     const top = Object.entries(c.by_sido || {}).filter(([sido, n]) => !METRO.has(sido) && n > 0).slice(0, 2);
-    if (top.length) sentences.push(`비수도권에서는 ${top.map(([sido, n]) => `${esc(sido)}(${n}건)`).join(", ")}에 많아.`);
+    if (top.length) sentences.push(`비수도권에서는 ${top.map(([sido, n]) => `${esc(sido)}(${n}건)`).join(", ")}에 많습니다.`);
   }
   const typeParts = COMPANY_TYPES
     .filter((t) => enabledTypes.has(t.key) && (c.company_type?.[t.key] || 0) > 0)
@@ -207,7 +207,7 @@ function renderList(ctx) {
     </div>
     ${items.length
       ? `<ul class="pst-list">${visible.map((item) => listItemHtml(item, ctx.enabledTypes)).join("")}</ul>`
-      : `<p class="pst-msg">이 조건에 맞는 공고가 없어.</p>`}
+      : `<p class="pst-msg">조건에 맞는 공고가 없습니다.</p>`}
     ${rest > 0 ? `<button type="button" class="pst-more">더 보기 (${rest}건 남음)</button>` : ""}`;
 }
 
@@ -249,7 +249,7 @@ async function mountMap(ctx) {
     map.setItems(filteredItems(ctx), { fit: ctx.filters.region !== "all" || ctx.filters.ctype !== "all" });
   } catch (error) {
     console.warn("[postings] 지도를 만들지 못했어", error);
-    container.outerHTML = `<p class="pst-msg">지도를 불러오지 못했어. 아래 목록에서 공고를 볼 수 있어.</p>`;
+    container.outerHTML = `<p class="pst-msg">지도를 불러오지 못했습니다. 아래 목록에서 공고를 확인하실 수 있습니다.</p>`;
   }
 }
 
@@ -260,22 +260,22 @@ function renderData(ctx) {
   const period = PERIOD_LABEL[data.query?.regDate] || "최근";
   switch (data.status) {
     case "unmapped":
-      body.innerHTML = messageHtml("이 직업은 공고 연결을 준비 중이야.");
+      body.innerHTML = messageHtml("이 직업은 채용공고 연결을 준비하고 있습니다.");
       return;
     case "unconfigured":
-      body.innerHTML = messageHtml("채용공고 연동이 아직 설정되지 않았어.");
+      body.innerHTML = messageHtml("채용공고 연동이 설정되지 않았습니다.");
       return;
     case "error":
-      body.innerHTML = messageHtml("공고를 불러오지 못했어. 잠시 후 다시 시도해줘.", { retry: true });
+      body.innerHTML = messageHtml("공고를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.", { retry: true });
       return;
     default:
       break;
   }
   const stale = data.status === "stale"
-    ? `<p class="pst-stale" role="status">공고 갱신이 늦어지고 있어. <strong>${esc(formatKst(data.fetched_at))}</strong> 기준이야.</p>`
+    ? `<p class="pst-stale" role="status">공고 갱신이 지연되고 있습니다. <strong>${esc(formatKst(data.fetched_at))}</strong> 기준입니다.</p>`
     : "";
   if (data.status === "empty" || !data.counts || !data.items.length) {
-    body.innerHTML = `${stale}${messageHtml(`${period} 동안 이 직종으로 올라온 공고가 없어. 공고는 매일 갱신돼.`)}${sourceHtml(data)}`;
+    body.innerHTML = `${stale}${messageHtml(`${period} 동안 이 직종으로 등록된 공고가 없습니다. 공고는 매일 갱신됩니다.`)}${sourceHtml(data)}`;
     return;
   }
 
@@ -283,7 +283,7 @@ function renderData(ctx) {
   ctx.items = sortByClosing(data.items);
   const hasCoords = ctx.items.some((item) => typeof item.lat === "number" && typeof item.lng === "number");
   const mapHtml = hasCoords
-    ? `<div class="pst-map" role="region" aria-label="${esc(`${data.job_name} 채용공고 근무지 지도. 같은 내용을 아래 목록에서도 볼 수 있어.`)}"></div>
+    ? `<div class="pst-map" role="region" aria-label="${esc(`${data.job_name} 채용공고 근무지 지도. 같은 내용을 아래 목록에서도 확인하실 수 있습니다.`)}"></div>
        <div class="pst-legend" aria-hidden="true">
          <span><i class="pst-dot pst-dot-exact"></i>정확한 위치</span>
          <span><i class="pst-dot pst-dot-approx"></i>구·군 단위 대략 위치</span>
@@ -317,7 +317,7 @@ async function load(ctx) {
     if (active !== ctx) return;
     console.warn("[postings] 공고를 불러오지 못했어", error);
     const target = bodyOf(ctx);
-    if (target) target.innerHTML = messageHtml("공고를 불러오지 못했어. 잠시 후 다시 시도해줘.", { retry: true });
+    if (target) target.innerHTML = messageHtml("공고를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.", { retry: true });
   }
 }
 
@@ -373,7 +373,7 @@ export function mountPostingsSection(root, { jobCode }) {
     if (!root) return;
     if (!/^K\d{9}$/.test(String(jobCode || ""))) {
       const body = root.querySelector(".pst-body");
-      if (body) body.innerHTML = messageHtml("이 직업은 공고 연결을 준비 중이야.");
+      if (body) body.innerHTML = messageHtml("이 직업은 채용공고 연결을 준비하고 있습니다.");
       return;
     }
     const ctx = {

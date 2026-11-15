@@ -21,7 +21,7 @@ function loadScript(src) {
     script.src = src;
     script.async = false;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`스크립트를 불러오지 못했어: ${src}`));
+    script.onerror = () => reject(new Error(`스크립트를 불러오지 못했습니다: ${src}`));
     document.head.appendChild(script);
   });
 }

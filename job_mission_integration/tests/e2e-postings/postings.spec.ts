@@ -39,7 +39,7 @@ test("결과 화면에 채용공고 지도·요약·필터·목록이 보인다"
   await expect(section.getByText("지금 이 일을 뽑는 곳")).toBeVisible();
 
   const summary = section.locator(".pst-summary");
-  await expect(summary).toContainText(`지금 지원할 수 있는 건 ${EXPECTED.total}건`);
+  await expect(summary).toContainText(`현재 지원할 수 있는 공고는 ${EXPECTED.total}건`);
   await expect(summary).toContainText(`수도권 ${EXPECTED.metro}건(55%), 비수도권 ${EXPECTED.nonmetro}건`);
   await expect(summary).toContainText(`지역을 알 수 없는 공고는 ${EXPECTED.unknown}건`);
   await expect(summary).toContainText("전남광주(2건)");

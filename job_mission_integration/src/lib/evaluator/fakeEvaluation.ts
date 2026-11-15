@@ -44,7 +44,7 @@ export function fakeEvaluation(
           level: Math.max(1, Math.min(4, score)),
           primary_axis: axis,
           secondary_axes: [],
-          rationale: "가짜 채점 모드라 실제 판단이 아니야."
+          rationale: "가짜 채점 모드이므로 실제 판단이 아닙니다."
         }))
       : [];
     return [axis, {

@@ -91,10 +91,10 @@ function renderEmpty(filters) {
   if (s.withoutField) parts.push(`<button class="btn btn-sm" type="button" data-action="clear-field">분야를 ‘전체’로 바꾸면 ${s.withoutField}개</button>`);
   if (s.withoutExperienceable) parts.push(`<button class="btn btn-sm" type="button" data-action="clear-exp">체험 가능만 끄면 ${s.withoutExperienceable}개</button>`);
   return `<div class="empty" style="grid-column:1/-1">
-    <p><strong>‘${esc(filters.q || "")}’에 맞는 직무가 없어.</strong></p>
+    <p><strong>‘${esc(filters.q || "")}’에 해당하는 직무가 없습니다.</strong></p>
     ${parts.length ? `<div class="btn-row">${parts.join("")}</div>` : ""}
-    ${s.similarNames.length ? `<p style="margin-top:12px">혹시 이 직무를 찾았어? ${s.similarNames.map((j) => `<a href="/job.html?code=${esc(j.code)}">${esc(j.name)}</a>`).join(", ")}</p>` : ""}
-    <p style="margin-top:12px">이런 말로도 찾아봐: ${s.examples.map((w) => `<button class="btn btn-sm" type="button" data-example="${esc(w)}">${esc(w)}</button>`).join(" ")}</p>
+    ${s.similarNames.length ? `<p style="margin-top:12px">혹시 이 직무를 찾으셨나요? ${s.similarNames.map((j) => `<a href="/job.html?code=${esc(j.code)}">${esc(j.name)}</a>`).join(", ")}</p>` : ""}
+    <p style="margin-top:12px">이런 표현으로도 검색해 보세요: ${s.examples.map((w) => `<button class="btn btn-sm" type="button" data-example="${esc(w)}">${esc(w)}</button>`).join(" ")}</p>
   </div>`;
 }
 
@@ -133,7 +133,7 @@ async function main() {
     $("field").innerHTML = `<option value="">전체 분야</option>${data.fields.map((f) => `<option value="${esc(f)}">${esc(f)}</option>`).join("")}`;
     $("field").value = state.field;
   } catch (error) {
-    $("results").innerHTML = `<div class="notice notice-err" style="grid-column:1/-1">직무 목록을 불러오지 못했어. 잠시 후 다시 시도해줘.</div>`;
+    $("results").innerHTML = `<div class="notice notice-err" style="grid-column:1/-1">직무 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>`;
     return;
   }
   await loadInterests();
@@ -160,7 +160,7 @@ async function main() {
     if (compare) {
       const job = allJobs.find((j) => j.code === compare.dataset.compare);
       const result = toggleCompare(job);
-      if (result === "full") toast(`비교는 ${COMPARE_MAX}개까지 담을 수 있어. 하나를 빼고 다시 담아줘.`);
+      if (result === "full") toast(`비교함에는 최대 ${COMPARE_MAX}개까지 담을 수 있습니다. 하나를 뺀 뒤 다시 담아 주세요.`);
       render();
       return;
     }

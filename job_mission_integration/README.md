@@ -336,7 +336,7 @@ python scripts/export_missions.py --rebuild-index
 | 직무 비교 | `/compare.html` | 최대 3개, 브라우저에 유지, 적합도 점수는 넣지 않음 |
 | 로그인 | `/login.html` | 카카오 로그인, 가입(약관·개인정보·만 14세 확인), 개발용 로그인 |
 | 내 기록 | `/me.html` | 완료한 체험 다시 보기·지우기, 쓰던 답안 이어 쓰기, 관심 직무, 닉네임·로그아웃·탈퇴 |
-| 약관 | `/terms.html`, `/privacy.html` | 초안. 배포 전에 연락처 자리(`[배포 전에 …]`)를 채워야 함 |
+| 약관 | `/terms.html`, `/privacy.html` | 이용약관과 개인정보 처리방침. 연락처 자리(`[배포 전에 …]`)에 팀 연락처를 넣는다 |
 
 체험 화면(`/`)에는 업무 요청서 형식의 미션, 시작 전·후 흥미 질문, 결과 해석(수행 수준·직무 유사도·측정 범위), 근거 문장 강조, 해설 보고 재도전(1차·2차 레이더), 덜 잰 역량의 다음 미션, 공고 요구역량 비교, 강점 역량 직무, PNG 결과 카드·인쇄가 붙었습니다. 해설(기대 답안·채점 기준)은 `/api/bootstrap`에서 빠졌고, 미션을 제출한 뒤에만 `/api/missions/:key/explanation`으로 받을 수 있습니다.
 
@@ -348,7 +348,7 @@ npm run postings:fixture-snapshots
 # bash:       EVAL_MODE=fake AUTH_DEV_LOGIN=true POSTINGS_FIXTURE=1 npm run dev
 ```
 
-카카오 로그인을 켜려면 카카오 개발자 콘솔에서 앱을 만들고 카카오 로그인·OpenID Connect를 활성화한 뒤, 동의항목에 닉네임을 넣고 Redirect URI(`{PUBLIC_BASE_URL}/auth/kakao/callback`)를 등록합니다. 그다음 `.env`에 `KAKAO_LOGIN_CLIENT_ID`, `KAKAO_LOGIN_CLIENT_SECRET`, `KAKAO_ADMIN_KEY`, `PUBLIC_BASE_URL`을 넣습니다. 운영 도메인에서 HTTPS로 띄우는 방법은 `deploy/Caddyfile`과 `docker compose --profile https up -d`를 참고합니다.
+카카오 로그인을 켜려면 카카오 개발자 콘솔에서 앱을 만들고 카카오 로그인·OpenID Connect를 활성화한 뒤 Redirect URI(`{PUBLIC_BASE_URL}/auth/kakao/callback`)를 등록합니다. 서비스는 카카오에 본인 확인(`openid`)만 요청하고 닉네임은 요청하지 않습니다(닉네임은 가입 화면에서 직접 정합니다). 그다음 `.env`에 `KAKAO_LOGIN_CLIENT_ID`, `KAKAO_LOGIN_CLIENT_SECRET`, `KAKAO_ADMIN_KEY`, `PUBLIC_BASE_URL`을 넣습니다. 운영 도메인에서 HTTPS로 띄우는 방법은 `deploy/Caddyfile`과 `docker compose --profile https up -d`를 참고합니다.
 
 ### 채점 품질 측정(U18)
 
@@ -373,7 +373,7 @@ python3 scripts/build_manual_missions.py K000001196           # 검증 통과 �
 결과 화면 맨 아래에 체험한 직업의 고용24 채용공고를 근무지 기준 전국 지도와 목록으로 보여줍니다.
 데이터 처리 방법과 품질 지표는 [`docs/JOB_POSTINGS_METHOD.md`](docs/JOB_POSTINGS_METHOD.md)에 있습니다.
 
-1. `.env`에 `WORK24_RECRUIT_AUTH_KEY`, `KAKAO_REST_API_KEY`를 넣습니다. 키가 없으면 섹션에 "채용공고 연동이 아직 설정되지 않았어"가 표시됩니다.
+1. `.env`에 `WORK24_RECRUIT_AUTH_KEY`, `KAKAO_REST_API_KEY`를 넣습니다. 키가 없으면 섹션에 "채용공고 연동이 설정되지 않았습니다"가 표시됩니다.
 2. 스냅샷을 만듭니다. 서버가 켜져 있으면 시작 30초 뒤와 이후 1시간마다 오래된 스냅샷을 자동으로 갱신합니다.
 
 ```bash

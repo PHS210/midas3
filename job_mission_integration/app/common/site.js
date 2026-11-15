@@ -52,7 +52,7 @@ export async function api(method, url, body) {
     data = null;
   }
   if (!response.ok) {
-    throw new ApiRequestError(response.status, data?.error?.code || "HTTP_ERROR", data?.error?.message || `요청이 실패했어 (HTTP ${response.status})`, data?.error?.details);
+    throw new ApiRequestError(response.status, data?.error?.code || "HTTP_ERROR", data?.error?.message || `요청에 실패했습니다 (HTTP ${response.status})`, data?.error?.details);
   }
   return data;
 }

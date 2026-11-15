@@ -23,7 +23,7 @@ function prospectUp(job) {
 
 function render(jobs, session) {
   if (!jobs.length) {
-    host.innerHTML = `<div class="empty">아직 비교할 직무를 담지 않았어.
+    host.innerHTML = `<div class="empty">비교할 직무를 담지 않았습니다.
       <div class="btn-row"><a class="btn btn-p" href="/jobs.html">직무 탐색에서 담기</a></div></div>`;
     return;
   }
@@ -54,7 +54,7 @@ function render(jobs, session) {
     <tbody>${rows.map(([label, fn]) => `<tr><th scope="row">${label}</th>${jobs.map((j) => `<td>${fn(j)}</td>`).join("")}</tr>`).join("")}</tbody>
   </table></div>
   <div class="btn-row" style="margin-top:12px"><a class="btn" href="/jobs.html">직무 더 담기</a><button class="btn" type="button" data-action="clear">모두 비우기</button></div>
-  <p class="small muted" style="margin-top:12px">출처: 한국고용정보원 한국직업정보(KNOW). 능력·지식 순서는 그 직업 안에서 중요한 순서야.</p>`;
+  <p class="small muted" style="margin-top:12px">출처: 한국고용정보원 한국직업정보(KNOW). 능력·지식은 해당 직업에서 중요한 순서대로 표시합니다.</p>`;
 }
 
 async function load() {
@@ -74,7 +74,7 @@ async function load() {
     const data = await api("GET", `/api/jobs/compare?codes=${codes.join(",")}`);
     render(data.jobs, session);
   } catch (error) {
-    host.innerHTML = `<div class="notice notice-err">비교 정보를 불러오지 못했어. 잠시 후 다시 시도해줘.</div>`;
+    host.innerHTML = `<div class="notice notice-err">비교 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>`;
   }
 }
 

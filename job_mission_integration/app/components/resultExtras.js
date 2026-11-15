@@ -42,17 +42,17 @@ export function jobDefsForResult({ jobDefs, selectedJobs, selectedJobMeta }) {
 export function renderResultStatus({ state, esc }) {
   const notes = [];
   if (state.viewingAttempt) {
-    notes.push(`<div class="notice">저장된 결과를 다시 보는 중이야 · ${esc(state.viewingAttempt.date || "")}${state.viewingAttempt.outdated ? " · <span style=\"color:var(--warn)\">체험 뒤에 미션 내용이 바뀌었어(이전 버전 미션)</span>" : ""} · <a href="/me.html">내 기록으로</a></div>`);
+    notes.push(`<div class="notice">저장된 결과를 다시 보는 중입니다 · ${esc(state.viewingAttempt.date || "")}${state.viewingAttempt.outdated ? " · <span style=\"color:var(--warn)\">체험 이후 미션 내용이 변경되었습니다(이전 버전 미션)</span>" : ""} · <a href="/me.html">내 기록으로</a></div>`);
   } else if (state.attemptSave === "account") {
-    notes.push(`<div class="notice notice-ok" id="save-status">이 결과는 내 기록에 저장됐어. <a href="/me.html">내 기록 보기</a></div>`);
+    notes.push(`<div class="notice notice-ok" id="save-status">이 결과는 내 기록에 저장되었습니다. <a href="/me.html">내 기록 보기</a></div>`);
   } else if (state.attemptSave === "anonymous" && state.attemptId) {
     const back = encodeURIComponent(`/index.html?attempt=${state.attemptId}#simulation`);
-    notes.push(`<div class="notice" id="save-status">로그인하면 이 결과를 내 기록에 저장할 수 있어(24시간 안에). <a href="/login.html?return=${back}">로그인하고 저장하기</a></div>`);
+    notes.push(`<div class="notice" id="save-status">로그인하시면 이 결과를 내 기록에 저장할 수 있습니다(24시간 이내). <a href="/login.html?return=${back}">로그인하고 저장하기</a></div>`);
   } else if (state.attemptSave === "failed") {
-    notes.push(`<div class="notice notice-warn" id="save-status">결과를 기록에 저장하지 못했어. 화면은 그대로 볼 수 있어.</div>`);
+    notes.push(`<div class="notice notice-warn" id="save-status">결과를 기록에 저장하지 못했습니다. 화면에서는 그대로 확인하실 수 있습니다.</div>`);
   }
   if (state.evalMode === "fake") {
-    notes.push(`<div class="notice notice-warn">가짜 채점 모드(테스트·시연용)야. 점수는 실제 평가가 아니야.</div>`);
+    notes.push(`<div class="notice notice-warn">가짜 채점 모드(테스트·시연용)입니다. 점수는 실제 평가가 아닙니다.</div>`);
   }
   return notes.join("");
 }
@@ -70,12 +70,12 @@ export function renderPostSurvey({ state }) {
   const job = state.selectedJobs[0];
   const post = state.selfReports?.post?.[job];
   if (post?.submitted) return "";
-  return `<div class="rs" id="post-survey"><div class="rs-title">해보니 어땠어?</div>
-    <p class="axis-note">솔직하게 답하면 체험 전후 흥미 변화를 결과에 함께 보여줄게. 건너뛰어도 돼.</p>
-    ${scaleInput("sr-interest", "이 일이 얼마나 흥미로웠어?", post?.interest, "전혀", "매우")}
-    ${scaleInput("sr-difficulty", "얼마나 어려웠어?", post?.difficulty, "쉬움", "어려움")}
-    <fieldset class="sr-scale"><legend>이 일을 더 해보고 싶어?</legend><div class="sr-opts">
-      ${[["yes", "더 해보고 싶어"], ["maybe", "글쎄"], ["no", "아니"]].map(([v, t]) => `<label><input type="radio" name="sr-again" value="${v}"${post?.again === v ? " checked" : ""}> ${t}</label>`).join("")}
+  return `<div class="rs" id="post-survey"><div class="rs-title">체험은 어떠셨나요?</div>
+    <p class="axis-note">솔직하게 답해 주시면 체험 전후의 흥미 변화를 결과에 함께 보여 드립니다. 건너뛰셔도 됩니다.</p>
+    ${scaleInput("sr-interest", "이 직무가 얼마나 흥미로웠나요?", post?.interest, "전혀", "매우")}
+    ${scaleInput("sr-difficulty", "얼마나 어려웠나요?", post?.difficulty, "쉬움", "어려움")}
+    <fieldset class="sr-scale"><legend>이 직무를 더 체험해 보고 싶으신가요?</legend><div class="sr-opts">
+      ${[["yes", "더 해보고 싶습니다"], ["maybe", "잘 모르겠습니다"], ["no", "아니요"]].map(([v, t]) => `<label><input type="radio" name="sr-again" value="${v}"${post?.again === v ? " checked" : ""}> ${t}</label>`).join("")}
     </div></fieldset>
     <button class="btn btn-p" id="btn-survey-save" type="button">답변 저장</button>
   </div>`;
@@ -96,7 +96,7 @@ export function renderInterestChange({ state, jobDefs, esc }) {
   }).join("");
   if (!rows.trim()) return "";
   return `<div class="rs" id="interest-change"><div class="rs-title">체험 전후 흥미 변화</div>${rows}
-    <p class="axis-note">내가 직접 고른 값(1~5)이야. 점수와 따로 보면 돼.</p></div>`;
+    <p class="axis-note">직접 선택하신 값(1~5)입니다. 점수와는 별개로 참고해 주세요.</p></div>`;
 }
 
 // ── 결과 해석(U17): 수행 수준 · 직무 유사도 · 측정 범위를 나눠서 ──
@@ -119,15 +119,15 @@ export function renderInterpretation({ state, axes, axisLabels, jobDefs, esc }) 
     const shape = Number.isFinite(meta.shapeSimilarityPct) ? ` <span class="axis-note">(축 비중 유사도 ${meta.shapeSimilarityPct}% × 수행·몰입 반영 ${Math.round((meta.levelFactor ?? 1) * 100)}%)</span>` : "";
     return `<li>${esc(job?.job_name || code)}: <b>${state.compatibility?.[code] ?? 0}%</b>${shape}</li>`;
   }).join("");
-  return `<div class="rs" id="interpretation"><div class="rs-title">결과를 이렇게 읽어줘</div>
+  return `<div class="rs" id="interpretation"><div class="rs-title">결과 해석 안내</div>
     <div class="interp-grid">
       <div class="interp-card"><div class="interp-k">수행 수준</div>
-        <p>답변에서 실제로 드러난 역량이야(0~4점). 가장 잘 드러난 건 <b>${esc(axisLabels[top])}</b> ${fmt(avg[top])}점${low && low !== top ? `, 가장 덜 드러난 건 <b>${esc(axisLabels[low])}</b> ${fmt(avg[low])}점` : ""}이야.</p></div>
+        <p>답변에서 실제로 드러난 역량입니다(0~4점). 가장 잘 드러난 건 <b>${esc(axisLabels[top])}</b> ${fmt(avg[top])}점${low && low !== top ? `, 가장 덜 드러난 건 <b>${esc(axisLabels[low])}</b> ${fmt(avg[low])}점` : ""}입니다.</p></div>
       <div class="interp-card"><div class="interp-k">직무 유사도</div>
         <ul>${compat}</ul>
-        <p class="axis-note">답변의 5축 비중이 KNOW 재직자 직무 프로필과 얼마나 비슷한지에, 수행 수준과 몰입 추정을 반영한 점수야. 비중이 비슷해도 답변 수준이 낮으면 점수가 낮아져.</p></div>
+        <p class="axis-note">답변의 5축 비중이 KNOW 재직자 직무 프로필과 얼마나 비슷한지에, 수행 수준과 몰입 추정을 반영한 점수입니다. 비중이 비슷하더라도 답변 수준이 낮으면 점수가 낮아집니다.</p></div>
       <div class="interp-card"><div class="interp-k">측정 범위</div>
-        <p>미션 ${logs.length}개로 잰 결과야. ${unmeasured.length ? `이번 미션은 <b>${esc(withJosa(unmeasured.map((a) => axisLabels[a]).join(", "), "을", "를"))}</b> 거의 재지 않았어.` : "다섯 축을 모두 조금씩 쟀어."}</p>
+        <p>미션 ${logs.length}개로 측정한 결과입니다. ${unmeasured.length ? `이번 미션은 <b>${esc(withJosa(unmeasured.map((a) => axisLabels[a]).join(", "), "을", "를"))}</b> 거의 측정하지 않았습니다.` : "다섯 축을 모두 조금씩 측정했습니다."}</p>
         <p class="axis-note">채점: ${sources.map((s) => SCORING_LABEL[s] || s).join(", ")} · 평균 확실도 ${Math.round(avgConf * 100)}%</p></div>
     </div></div>`;
 }
@@ -166,10 +166,10 @@ export function renderEvidenceHighlight({ state, axes, axisLabels, esc }) {
   });
   const allAxes = axes.filter((axis) => blocks.some((b) => b.available.includes(axis)));
   if (!allAxes.length) {
-    return `<div class="rs" id="evidence-highlight"><div class="rs-title">내 답변의 근거 문장</div><p class="axis-note">이번 채점에서는 답변에서 인용한 근거 문장이 없어. 수치·관찰·판단 이유를 문장으로 써 주면 근거로 잡혀.</p></div>`;
+    return `<div class="rs" id="evidence-highlight"><div class="rs-title">내 답변의 근거 문장</div><p class="axis-note">이번 채점에서는 답변에서 인용한 근거 문장이 없습니다. 수치·관찰·판단 이유를 문장으로 작성하시면 근거로 반영됩니다.</p></div>`;
   }
   return `<div class="rs" id="evidence-highlight"><div class="rs-title">내 답변의 근거 문장</div>
-    <p class="axis-note">역량을 누르면 그 역량이 드러난 내 문장이 강조돼.</p>
+    <p class="axis-note">역량을 누르면 해당 역량이 드러난 문장이 강조됩니다.</p>
     <div class="hl-axes" role="group" aria-label="역량 고르기">${allAxes.map((axis, i) => `<button type="button" class="btn btn-g hl-btn" data-hl-axis="${axis}" aria-pressed="${i === 0}">${esc(axisLabels[axis])}</button>`).join("")}</div>
     ${blocks.map((b) => `<div class="hl-wrap" data-axis="${allAxes[0]}"><div class="hl-title">${esc(b.title)}</div><p class="hl-text">${b.sentences}</p></div>`).join("")}
   </div>`;
@@ -199,11 +199,11 @@ export function renderRetrySection({ state, axes, axisLabels, esc }) {
         { label: "2차", values: after, color: "#5e6ad2", fill: "rgba(94,106,210,.30)" }
       ] })}<div class="axis-note">점선 1차 · 실선 2차</div></div>
       <table class="gap-tbl retry-tbl"><thead><tr><th>역량</th><th>1차</th><th>2차</th><th>변화</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <p class="axis-note">해설을 본 뒤 다시 쓴 답이라 점수가 오르는 게 자연스러워. 처음 결과(위)는 그대로 두고 비교만 보여줘.</p></div>`;
+      <p class="axis-note">해설을 확인한 뒤 다시 작성한 답변이므로 점수가 오르는 것이 자연스럽습니다. 처음 결과(위)는 그대로 두고 비교만 보여 드립니다.</p></div>`;
   }
   if (state.viewingAttempt) return "";
   return `<div class="rs" id="retry-offer"><div class="rs-title">해설 보고 다시 도전</div>
-    <p class="axis-note">이 미션의 기대 답안 방향과 채점 기준을 보여줄게. 같은 미션을 다시 내면 1차와 2차를 레이더로 겹쳐 비교해줘.</p>
+    <p class="axis-note">이 미션의 기대 답안 방향과 채점 기준을 보여 드립니다. 같은 미션을 다시 제출하시면 1차와 2차 결과를 레이더 차트로 겹쳐 비교해 드립니다.</p>
     <button class="btn btn-p" type="button" id="btn-retry-open" data-mission-key="${esc(first.mission_key)}">해설 보기</button></div>`;
 }
 
@@ -217,13 +217,13 @@ export function renderRetryScreen({ state, mission, axes, axisLabels, esc }) {
     .sort((x, y) => x.score - y.score)
     .slice(0, 2);
   return `<div class="sec-head"><div class="eyebrow">재도전</div><div class="sec-h">${esc(mission.title)}</div>
-    <div class="sec-sub">해설은 제출한 뒤에만 볼 수 있어. 기준을 보고 답을 고쳐서 다시 내봐.</div></div>
+    <div class="sec-sub">해설은 제출 후에만 확인하실 수 있습니다. 기준을 확인하고 답변을 수정해 다시 제출해 보세요.</div></div>
     <div class="retry-layout">
       <div class="card">
         <div class="pq-lbl">아쉬웠던 부분(1차 채점)</div>
-        <ul class="retry-list">${weak.map((w) => `<li><b>${esc(axisLabels[w.axis])}</b> ${w.score}/4 — ${esc(w.reason).slice(0, 160)}</li>`).join("") || "<li>특별히 낮은 축이 없어.</li>"}</ul>
+        <ul class="retry-list">${weak.map((w) => `<li><b>${esc(axisLabels[w.axis])}</b> ${w.score}/4 — ${esc(w.reason).slice(0, 160)}</li>`).join("") || "<li>특별히 낮은 축이 없습니다.</li>"}</ul>
         <div class="pq-lbl" style="margin-top:14px">기대 답안 방향</div>
-        <ul class="retry-list">${(evaluation.expected_insights || []).map((i) => `<li>${esc(i)}</li>`).join("") || "<li>이 미션에는 해설이 없어.</li>"}</ul>
+        <ul class="retry-list">${(evaluation.expected_insights || []).map((i) => `<li>${esc(i)}</li>`).join("") || "<li>이 미션에는 해설이 없습니다.</li>"}</ul>
         <div class="pq-lbl" style="margin-top:14px">채점 기준</div>
         <ul class="retry-list">${(evaluation.rubric || []).map((r) => `<li><b>${esc(r.criterion)}</b>${r.points ? ` (${esc(r.points)}점)` : ""} — ${esc(r.description || "")}</li>`).join("")}</ul>
       </div>
@@ -268,7 +268,7 @@ export function renderNextMissions({ state, axes, axisLabels, allMissions, esc }
   const { targetAxes, picks } = pickNextMissions({ state, axes, allMissions });
   if (!picks.length) return "";
   return `<div class="rs" id="next-missions"><div class="rs-title">다음에 해볼 미션</div>
-    <p class="axis-note">이번에 덜 잰 역량(${targetAxes.map((a) => esc(axisLabels[a])).join(", ")})을 재는 미션이야. 결과가 더 고르게 나와.</p>
+    <p class="axis-note">이번에 덜 잰 역량(${targetAxes.map((a) => esc(axisLabels[a])).join(", ")})을 측정하는 미션입니다. 결과를 더 고르게 확인하실 수 있습니다.</p>
     <div class="next-list">${picks.map((p) => `<a class="next-card" href="/index.html?mission=${encodeURIComponent(p.mission.key)}#simulation">
       <span class="next-axis">${esc(axisLabels[p.axis])} 측정</span><span class="next-title">${esc(p.mission.title)}</span><span class="axis-note">${esc(p.mission.job_name)}</span></a>`).join("")}</div></div>`;
 }
@@ -293,7 +293,7 @@ export async function mountStrengthJobs({ root, state, axes, axisLabels, jobsByA
     const data = await jobsByAxisRequest(axis);
     const jobs = data.jobs.slice(0, 6);
     root.innerHTML = `<div class="rs-title">내 강점 역량으로 찾은 직무와 공고</div>
-      <p class="axis-note">${strong ? `3점(75%) 이상으로 잘 드러난` : `이번에 가장 잘 드러난`} <b>${esc(axisLabels[axis])}</b>(${fmt(avg[axis])}점) 비중이 큰 직무야. 공고가 연결된 직무는 바로 공고를 볼 수 있어.</p>
+      <p class="axis-note">${strong ? `3점(75%) 이상으로 잘 드러난` : `이번에 가장 잘 드러난`} <b>${esc(axisLabels[axis])}</b>(${fmt(avg[axis])}점) 비중이 큰 직무입니다. 공고가 연결된 직무는 바로 공고를 확인하실 수 있습니다.</p>
       <div class="next-list">${jobs.map((j) => {
         const hasPostings = j.postings_status === "ok" || j.postings_status === "stale";
         return `<a class="next-card" href="/job.html?code=${esc(j.code)}${hasPostings ? "#postings-section" : ""}"><span class="next-title">${esc(j.name)}</span>
@@ -301,7 +301,7 @@ export async function mountStrengthJobs({ root, state, axes, axisLabels, jobsByA
           <span>${hasPostings ? `<span class="chip-mini ok">공고 보기</span>` : ""}${j.experienceable ? `<span class="chip-mini">체험 가능</span>` : ""}</span></a>`;
       }).join("")}</div>`;
   } catch (_) {
-    root.innerHTML = `<div class="rs-title">내 강점 역량으로 찾은 직무와 공고</div><p class="axis-note">지금은 불러오지 못했어.</p>`;
+    root.innerHTML = `<div class="rs-title">내 강점 역량으로 찾은 직무와 공고</div><p class="axis-note">현재 정보를 불러오지 못했습니다.</p>`;
   }
 }
 
@@ -330,11 +330,11 @@ export async function mountRequirementCompare({ root, state, axes, axisLabels, p
     }).join("");
     const gap = axes.filter((a) => isMeasuredAxis(coverage, a) && (data.axes[a]?.share || 0) >= 0.2 && avg[a] < 2).map((a) => axisLabels[a]);
     root.innerHTML = `<div class="rs-title">공고가 요구하는 역량 vs 내 결과</div>
-      <p class="axis-note">최근 공고 ${data.analyzed_postings}건의 ${data.detail_postings ? `제목과 직무내용(${data.detail_postings}건)` : "제목"}에서 문장 ${data.analyzed_sentences}개를 5개 역량으로 나눠 센 비중(위)과 내 점수(아래)야.</p>
+      <p class="axis-note">최근 공고 ${data.analyzed_postings}건의 ${data.detail_postings ? `제목과 직무내용(${data.detail_postings}건)` : "제목"}에서 문장 ${data.analyzed_sentences}개를 5개 역량으로 나눠 센 비중(위)과 내 점수(아래)입니다.</p>
       <div class="req-legend"><span><i class="req-post"></i>공고 언급 비중</span><span><i class="req-me"></i>내 점수(4점=100%)</span></div>
       ${rows}
       ${gap.length ? `<p class="axis-note" style="margin-top:8px">공고에서 자주 찾는데 이번에 덜 드러난 역량: <b>${gap.map(esc).join(", ")}</b></p>` : ""}
-      <p class="axis-note">문장을 키워드로 나눈 대략적인 비중이야. 공고 원문을 꼭 확인해.</p>`;
+      <p class="axis-note">문장을 키워드로 분류한 대략적인 비중입니다. 공고 원문을 반드시 확인해 주세요.</p>`;
   } catch (_) {
     root.remove();
   }
@@ -343,7 +343,7 @@ export async function mountRequirementCompare({ root, state, axes, axisLabels, p
 // ── 결과 카드(U03) 버튼 ─────────────────────────────────
 export function renderCardActions() {
   return `<div class="rs" id="result-card-actions"><div class="rs-title">결과 카드로 남기기</div>
-    <p class="axis-note">레이더, 비슷한 직무 3개, 한 줄 요약만 담아. 답변 원문은 넣지 않아.</p>
+    <p class="axis-note">레이더 차트, 비슷한 직무 3개, 한 줄 요약만 담습니다. 답변 원문은 포함하지 않습니다.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p" id="btn-card-png" type="button">PNG로 저장</button><button class="btn btn-g" id="btn-card-print" type="button">인쇄</button></div>
     <img id="result-card-print" alt="" hidden></div>`;
 }

@@ -30,7 +30,8 @@ export function buildAuthorizeUrl(input: { clientId: string; redirectUri: string
     redirect_uri: input.redirectUri,
     state: input.state,
     nonce: input.nonce,
-    scope: "openid profile_nickname",
+    // 본인 확인(회원번호)만 요청한다. 닉네임은 가입 화면에서 사용자가 직접 정한다.
+    scope: "openid",
     code_challenge: input.codeChallenge,
     code_challenge_method: "S256"
   });
@@ -85,7 +86,6 @@ export async function exchangeCode(
 
 export interface KakaoIdentity {
   sub: string;
-  nickname: string;
 }
 
 // ID 토큰 서명 검증은 카카오의 토큰 정보 API에 맡기고, 발급자·대상·nonce·만료는 여기서 다시 확인한다.
@@ -108,7 +108,7 @@ export function checkIdTokenPayload(payload: Record<string, unknown>, expected: 
   if (!Number.isFinite(exp) || exp * 1000 <= now) throw new KakaoAuthError("ID 토큰이 만료됐어.", "KAKAO_TOKEN_EXPIRED");
   const sub = String(payload.sub ?? "").trim();
   if (!sub) throw new KakaoAuthError("카카오 회원번호가 없어.", "KAKAO_NO_SUB");
-  return { sub, nickname: String(payload.nickname ?? "").trim() };
+  return { sub };
 }
 
 // 탈퇴할 때 카카오와의 연결을 끊는다(앱 어드민 키 사용).

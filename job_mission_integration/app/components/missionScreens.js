@@ -3,7 +3,7 @@ export const ANSWER_MAX = 3000;
 
 export function answerCountText(length) {
   const near = length >= ANSWER_MAX * 0.9;
-  return `${near ? "⚠ " : ""}${length.toLocaleString("ko-KR")} / ${ANSWER_MAX.toLocaleString("ko-KR")}자${length >= ANSWER_MAX ? " (한도에 닿았어)" : ""}`;
+  return `${near ? "⚠ " : ""}${length.toLocaleString("ko-KR")} / ${ANSWER_MAX.toLocaleString("ko-KR")}자${length >= ANSWER_MAX ? " (최대 글자 수 도달)" : ""}`;
 }
 
 export function renderMaterial(material, esc) {
@@ -439,20 +439,20 @@ export function renderPreQuestionScreen({ state, jobDefs, renderBrand }) {
   <p class="sdesc">이 직무에 대한 첫인상을 솔직하게 적어주세요.</p>
   <div class="card" style="margin-bottom:14px">
     <div class="pq-lbl">${selectedJob.icon} ${selectedJob.job_name}</div>
-    <div class="pq-txt">이 직무가 하루에 가장 많이 하는 일이 뭐일 것 같아?</div>
+    <div class="pq-txt">이 직무가 하루 중 가장 많이 하는 일은 무엇이라고 생각하시나요?</div>
     <textarea id="pq1" rows="3">${esc(answers.q1)}</textarea>
   </div>
   <div class="card" style="margin-bottom:14px">
     <div class="pq-lbl">${selectedJob.icon} ${selectedJob.job_name}</div>
-    <div class="pq-txt">이 직무에서 가장 자주 쓰는 능력이 뭐일 것 같아?</div>
+    <div class="pq-txt">이 직무에서 가장 자주 쓰는 능력은 무엇이라고 생각하시나요?</div>
     <textarea id="pq2" rows="3">${esc(answers.q2)}</textarea>
   </div>
   <div class="card" id="pq-interest">
-    <fieldset class="sr-scale"><legend>지금 이 직무에 얼마나 관심 있어? (선택)</legend>
+    <fieldset class="sr-scale"><legend>현재 이 직무에 얼마나 관심이 있으신가요? (선택)</legend>
       <div class="sr-opts">${[1, 2, 3, 4, 5].map((v) => `<label><input type="radio" name="pq-interest" value="${v}"${Number(answers.interest_pre) === v ? " checked" : ""}> ${v}</label>`).join("")}</div>
       <div class="sr-ends"><span>전혀 없음</span><span>매우 많음</span></div>
     </fieldset>
-    <div class="axis-note" style="margin:0">체험이 끝난 뒤 한 번 더 물어보고 변화를 보여줄게.</div>
+    <div class="axis-note" style="margin:0">체험을 마친 뒤 한 번 더 여쭤보고 변화를 보여 드립니다.</div>
   </div>
   <div style="display:flex;gap:10px;margin-top:24px">
     <button class="btn btn-g" id="btn-pback">${state.preqIndex > 0 ? "← 이전 직무" : "← 직무 선택"}</button>

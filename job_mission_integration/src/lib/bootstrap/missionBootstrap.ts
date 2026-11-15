@@ -3,11 +3,11 @@ import path from "node:path";
 
 const AXES = ["AX1", "AX2", "AX3", "AX4", "AX5"] as const;
 const AXIS_SKILL_LABELS: Record<string, string> = {
-  AX1: "데이터로 생각해요",
-  AX2: "꼼꼼하게 관찰해요",
-  AX3: "전략적으로 판단해요",
-  AX4: "팀을 이끌어요",
-  AX5: "사람을 배려해요"
+  AX1: "데이터 기반 사고",
+  AX2: "세밀한 관찰",
+  AX3: "전략적 판단",
+  AX4: "팀 조율과 리더십",
+  AX5: "배려와 소통"
 };
 const JOB_SUMMARY_BY_CODE: Record<string, string> = {
   K000000997: "상품기획자는 시장·고객 데이터를 바탕으로 상품 콘셉트와 출시 우선순위를 기획하는 직무입니다.",
@@ -108,7 +108,7 @@ function buildDailyDescription({
     ? `${domain} 데이터를 다루며`
     : `${jobName} 관련 데이터를 다루며`;
 
-  return `${domainPrefix} "${titleText}" 같은 과제를 수행해요. 보통 ${flowText} 순서로 진행하고, 미션 1개 기준 약 ${avgMinutes}분 정도의 분석·정리 작업이 필요해요.`;
+  return `${domainPrefix} "${titleText}" 같은 과제를 수행합니다. 보통 ${flowText} 순서로 진행하고, 미션 1개 기준 약 ${avgMinutes}분 정도의 분석·정리 작업이 필요합니다.`;
 }
 
 function buildJobSummary({

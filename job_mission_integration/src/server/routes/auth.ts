@@ -151,7 +151,8 @@ export function authRouter({ db, config, fetchImpl = fetch }: AuthDeps) {
         codeVerifier: String(flow.verifier ?? "")
       }, fetchImpl);
       const identity = await verifyIdToken(idToken, { clientId: config.auth.kakaoClientId, nonce: String(flow.nonce ?? "") }, fetchImpl);
-      const result = completeIdentity(res, { provider: "kakao", providerUserId: identity.sub, nickname: identity.nickname }, returnTo);
+      // 카카오 닉네임은 받지 않는다. 가입 화면에 임시 이름을 채우고 사용자가 직접 정한다.
+      const result = completeIdentity(res, { provider: "kakao", providerUserId: identity.sub, nickname: "" }, returnTo);
       if (result.status === "signup_required") return res.redirect(303, "/login.html?step=signup");
       const suffix = result.claimed ? `${returnTo.includes("?") ? "&" : "?"}claimed=${result.claimed}` : "";
       return res.redirect(303, `${returnTo}${suffix}`);
@@ -192,7 +193,7 @@ export function authRouter({ db, config, fetchImpl = fetch }: AuthDeps) {
     const auth = getAuth(res);
     const flowId = auth.cookies[SIGNUP_COOKIE];
     const flow = flowId ? peekAuthFlow(db, flowId, "signup") : null;
-    if (!flow) return sendApiError(res, 404, "SIGNUP_NOT_PENDING", "가입 진행 정보가 없거나 만료됐어. 다시 로그인해줘.");
+    if (!flow) return sendApiError(res, 404, "SIGNUP_NOT_PENDING", "가입 진행 정보가 없거나 만료되었습니다. 다시 로그인해 주세요.");
     return res.json({ nickname: flow.nickname, provider: flow.provider, terms_version: TERMS_VERSION });
   });
 
@@ -200,14 +201,14 @@ export function authRouter({ db, config, fetchImpl = fetch }: AuthDeps) {
     const auth = getAuth(res);
     const parsed = SignupSchema.safeParse(req.body ?? {});
     if (!parsed.success) {
-      return sendApiError(res, 400, "SIGNUP_CONSENT_REQUIRED", "이용약관·개인정보 처리방침 동의와 만 14세 이상 확인이 모두 필요해.", parsed.error.issues);
+      return sendApiError(res, 400, "SIGNUP_CONSENT_REQUIRED", "이용약관 및 개인정보 수집·이용 동의와 만 14세 이상 확인이 모두 필요합니다.", parsed.error.issues);
     }
     const nickname = normalizeNickname(parsed.data.nickname);
-    if (!nickname) return sendApiError(res, 400, "NICKNAME_INVALID", "닉네임은 2~20자(한글·영문·숫자·공백·_-.)로 정해줘.");
+    if (!nickname) return sendApiError(res, 400, "NICKNAME_INVALID", "닉네임은 2~20자의 한글, 영문, 숫자, 공백, 밑줄(_), 하이픈(-), 마침표(.)만 사용할 수 있습니다.");
     const flowId = auth.cookies[SIGNUP_COOKIE];
     const flow = flowId ? takeAuthFlow(db, flowId, "signup") : null;
     clearCookie(res, SIGNUP_COOKIE, config.cookieSecure);
-    if (!flow) return sendApiError(res, 410, "SIGNUP_EXPIRED", "가입 진행 시간이 지났어. 다시 로그인해줘.");
+    if (!flow) return sendApiError(res, 410, "SIGNUP_EXPIRED", "가입 유효 시간이 지났습니다. 다시 로그인해 주세요.");
     const provider = String(flow.provider);
     const providerUserId = String(flow.providerUserId);
     const user = findUserByProvider(db, provider, providerUserId)
@@ -226,7 +227,7 @@ export function authRouter({ db, config, fetchImpl = fetch }: AuthDeps) {
   router.patch("/api/me", requireUser, requireCsrf, (req, res) => {
     const auth = getAuth(res);
     const nickname = normalizeNickname((req.body ?? {}).nickname);
-    if (!nickname) return sendApiError(res, 400, "NICKNAME_INVALID", "닉네임은 2~20자(한글·영문·숫자·공백·_-.)로 정해줘.");
+    if (!nickname) return sendApiError(res, 400, "NICKNAME_INVALID", "닉네임은 2~20자의 한글, 영문, 숫자, 공백, 밑줄(_), 하이픈(-), 마침표(.)만 사용할 수 있습니다.");
     updateNickname(db, auth.user!.id, nickname);
     return res.json({ user: publicUser({ ...auth.user!, nickname }) });
   });
@@ -236,7 +237,7 @@ export function authRouter({ db, config, fetchImpl = fetch }: AuthDeps) {
     const auth = getAuth(res);
     const user = auth.user!;
     if ((req.body ?? {}).confirm !== "탈퇴") {
-      return sendApiError(res, 400, "WITHDRAW_CONFIRM_REQUIRED", "확인 문구 '탈퇴'를 입력해줘.");
+      return sendApiError(res, 400, "WITHDRAW_CONFIRM_REQUIRED", "확인 문구 '탈퇴'를 입력해 주세요.");
     }
     let kakaoUnlink: "done" | "skipped" | "failed" = "skipped";
     if (user.provider === "kakao") {
