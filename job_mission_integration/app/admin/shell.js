@@ -197,7 +197,7 @@ export function setCrumb(rootLabel, leaf) {
 // API 상태 한 줄의 글과 점 색
 function apiState(status) {
   if (status?.mode === "fake") return { text: "시험 모드(실제 생성 안 함)", dot: "dot warn" };
-  if (status?.preflight?.ok) return { text: "Claude API 연결됨", dot: "dot" };
+  if (status?.preflight?.ok) return { text: "AI 연결됨", dot: "dot" };
   const failed = Array.isArray(status?.preflight?.checks) ? status.preflight.checks.find((check) => check && !check.ok) : null;
   return { text: errorText(failed?.code), dot: "dot danger" };
 }

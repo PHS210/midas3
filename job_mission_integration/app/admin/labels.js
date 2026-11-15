@@ -33,20 +33,17 @@ export const BLOCKED_REASON_TEXT = {
   NO_LINK: "이어진 능력단위가 없습니다"
 };
 
-// 근거 기록의 단계마다 누가 정했나(chain[].kind)
-export const KIND_LABELS = { data: "데이터", link_decision: "연결 판단", ai_decision: "AI 판단", rule: "규칙" };
-
 const ERROR_TEXT = {
   AUTH_REQUIRED: "관리자 암호가 필요합니다.",
   ADMIN_PASSWORD_NOT_SET: "서버에 관리자 암호가 설정돼 있지 않습니다.",
   GENERATION_ALREADY_RUNNING: "지금 만들고 있는 미션이 있습니다. 끝난 뒤에 다시 시작해 주세요.",
   GENERATION_STILL_RUNNING: "아직 만들고 있는 중이라 할 수 없습니다. 끝난 뒤에 다시 해 주세요.",
   GENERATION_DAILY_LIMIT: "오늘 만들 수 있는 건수를 모두 썼습니다.",
-  LLM_API_KEY_MISSING: "서버에 Claude API 키가 없습니다.",
-  ANTHROPIC_SDK_MISSING: "서버에 Python 패키지(anthropic)가 깔려 있지 않습니다.",
-  ANTHROPIC_AUTH_FAILED: "Claude API 키가 받아들여지지 않았습니다.",
-  ANTHROPIC_MODEL_NOT_FOUND: "설정한 모델을 찾을 수 없습니다.",
-  ANTHROPIC_PREFLIGHT_FAILED: "Claude API에 연결하지 못했습니다.",
+  LLM_API_KEY_MISSING: "서버에 AI API 키가 없습니다.",
+  ANTHROPIC_SDK_MISSING: "서버에 AI 호출에 쓰는 Python 패키지가 깔려 있지 않습니다.",
+  ANTHROPIC_AUTH_FAILED: "AI API 키가 받아들여지지 않았습니다.",
+  ANTHROPIC_MODEL_NOT_FOUND: "설정한 AI 모델을 찾을 수 없습니다.",
+  ANTHROPIC_PREFLIGHT_FAILED: "AI에 연결하지 못했습니다.",
   GENERATION_PYTHON_UNAVAILABLE: "서버에서 Python을 실행하지 못했습니다.",
   GENERATION_CONFIG_INVALID: "서버의 생성 설정 값이 올바르지 않습니다.",
   GENERATION_TIMEOUT: "시간이 너무 오래 걸려 멈췄습니다.",

@@ -399,13 +399,9 @@ function basisBody(run, part, found) {
       .map((source) => `<div class="q">${hasText(source.name) ? `<small>${esc(source.name)}</small>` : ""}${esc(source.text)}</div>`)
       .join("")}`;
   }
-  if (found.details.length) {
-    // 보일 것이 자세히 보기뿐이면(미션 칸 등) 펼쳐 둔다
-    const open = !found.why.length && !found.sources.length ? " open" : "";
-    html += `<details style="margin-top:14px"${open}>
-      <summary><span class="link">자세히 보기${chev()}</span></summary>
-      <div style="margin-top:10px">${found.details.map((row) => `<div class="ilbl">${esc(row.label)}</div><div>${esc(row.value)}</div>`).join("")}</div>
-    </details>`;
+  // 그 밖의 줄(found.details)은 "왜"도 원문도 없는 칸(미션 칸의 난이도 규칙)에서만 보인다. 접는 "자세히 보기"는 두지 않는다
+  if (!html && found.details.length) {
+    html = found.details.map((row) => `<div class="ilbl">${esc(row.label)}</div><div>${esc(row.value)}</div>`).join("");
   }
   return html;
 }
