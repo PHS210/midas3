@@ -217,6 +217,7 @@ table.dt .ttl{font-weight:500}
 table.dt .num{text-align:center;color:var(--tx2)}
 table.dt tr.sub td{background:rgba(255,255,255,.015);padding-top:8px;padding-bottom:8px}
 table.dt tr.sub td:first-child{padding-left:40px}
+table.dt tr.sub.focus td{background:var(--ac-bg)}
 .st2{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .st2 i{width:7px;height:7px;border-radius:50%;background:var(--tx4)}
 .st2.wait i{background:var(--warn)}.st2.added i{background:var(--ok)}.st2.fail i{background:var(--danger)}

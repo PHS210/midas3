@@ -18,6 +18,8 @@ test("판정과 예상 시간의 말", () => {
   assert.deepEqual(estimateText(est, "hard", true), { time: "약 3분", cost: "약 $0.52" });
   assert.deepEqual(estimateText(est, "easy", false), { time: "약 1분", cost: "약 $0.25" });
   assert.equal(errorText("없는_코드"), "요청을 처리하지 못했습니다. (없는_코드)");
+  // 실패한 실행의 화면 글에는 코드를 쓰지 않는다
+  assert.deepEqual(["VALIDATION_FAILED", "BLUEPRINT_LLM_FAILED", "GENERATION_INTERNAL_ERROR", "GENERATION_TIMEOUT"].map((code) => /[A-Z_]{5,}/.test(errorText(code, { failedRun: true }))), [false, false, false, false]);
 });
 
 test("근거 찾기: 기록의 글을 그대로 보여 주고, 없는 부분은 null이다", () => {   // Review Focus 4

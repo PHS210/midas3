@@ -243,7 +243,7 @@ function resultHeader(run, ctx) {
   const added = run.status === "added";
   const addDisabled = ctx.readOnly || !run.catalog?.canAdd;
   const addPart = added
-    ? `<button class="btn" type="button" data-testid="add-catalog" disabled>${icon("check")}추가됨</button><a class="btn" href="#/catalog">카탈로그에서 보기</a>`
+    ? `<button class="btn" type="button" data-testid="add-catalog" disabled>${icon("check")}추가됨</button><a class="btn" href="${esc(hasText(run.catalog?.key) ? `#/catalog?mission=${encodeURIComponent(run.catalog.key)}` : "#/catalog")}">카탈로그에서 보기</a>`
     : `<button class="btn pri" type="button" data-act="add" data-testid="add-catalog"${addDisabled ? " disabled" : ""}>${icon("check")}카탈로그에 추가</button>`;
   const hint = !added && run.reviewVerdict === "fail" ? `<div class="hint">검수 판정이 '문제'라 추가할 수 없습니다</div>` : "";
   const title = run.missionTitle || run.mission?.mission?.title || own(STATUS_LABELS, run.status) || "";

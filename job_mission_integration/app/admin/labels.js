@@ -129,13 +129,22 @@ function minutesText(totalSeconds) {
   return rest ? `약 ${minutes}분 ${rest}초` : `약 ${minutes}분`;
 }
 
-// 오류 코드 → 글. 실패한 실행의 그 밖의 코드는 검사를 통과하지 못한 것으로 쓴다
+// 실패한 실행의 코드 가운데 서버 안에서 난 문제(검사에 걸린 것이 아닌 것)
+const RUN_INTERNAL_CODES = ["GENERATION_INTERNAL_ERROR", "GENERATION_RUN_DIR_NOT_FOUND", "GENERATION_NOT_SAVED", "RUNNER_FAILED"];
+
+// 오류 코드 → 글. 실패한 실행의 화면에는 코드를 쓰지 않는다(코드는 상세 로그에 남는다):
+// AI 호출이 실패한 것, 서버 안에서 난 문제, 그 밖(검사를 통과하지 못한 것)으로 나눠 쓴다
 export function errorText(code, options) {
   const failedRun = Boolean(options && options.failedRun);
   const known = own(ERROR_TEXT, code);
   if (known) return known;
+  if (failedRun) {
+    if (typeof code === "string" && /LLM|ANTHROPIC/.test(code)) return "AI 호출이 실패해 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요.";
+    if (RUN_INTERNAL_CODES.includes(code)) return "만드는 도중 서버에서 문제가 생겨 멈췄습니다.";
+    return "검사를 통과하지 못해 저장되지 않았습니다.";
+  }
   const tail = code === undefined || code === null || code === "" ? "" : ` (${code})`;
-  return failedRun ? `검사를 통과하지 못해 저장되지 않았습니다.${tail}` : `요청을 처리하지 못했습니다.${tail}`;
+  return `요청을 처리하지 못했습니다.${tail}`;
 }
 
 // 자료 형태 목록 → 한 줄. 좁히지 않았으면(null) 일곱 형태를 모두 쓴다
