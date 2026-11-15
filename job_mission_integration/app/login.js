@@ -29,6 +29,14 @@ function renderLogin(session) {
            <p class="small muted" style="margin-top:10px">처음 이용하시는 경우 약관 동의와 만 14세 이상 확인을 거쳐 가입됩니다. 별도의 비밀번호는 만들지 않습니다.</p>`
         : `<p class="muted">현재 카카오 로그인을 이용할 수 없습니다.</p>`}
     </div>
+    ${session.providers?.demo ? `<div style="margin-top:10px;text-align:center">
+      <button class="text-btn" type="button" id="demo-toggle" aria-expanded="false" aria-controls="demo-form">시연용 로그인</button>
+      <form class="card" id="demo-form" hidden style="margin-top:8px;text-align:left">
+        <div class="field"><label for="demo-id">아이디</label><input class="input" id="demo-id" autocomplete="username" required></div>
+        <div class="field"><label for="demo-pw">비밀번호</label><input class="input" id="demo-pw" type="password" autocomplete="current-password" required></div>
+        <div id="demo-error"></div>
+        <button class="btn" type="submit">로그인</button>
+      </form></div>` : ""}
     ${session.providers?.dev ? `<div class="card" style="margin-top:12px">
       <form id="dev-form">
         <p class="small muted" style="margin-bottom:8px">개발·테스트용 로그인입니다. 운영 서버에서는 표시되지 않습니다.</p>
@@ -36,6 +44,29 @@ function renderLogin(session) {
         <button class="btn" type="submit">개발용 로그인</button>
       </form></div>` : ""}
     <p class="small muted" style="margin-top:16px"><a href="/terms.html">이용약관</a> · <a href="/privacy.html">개인정보 처리방침</a></p>`;
+
+  const demoToggle = document.getElementById("demo-toggle");
+  const demoForm = document.getElementById("demo-form");
+  demoToggle?.addEventListener("click", () => {
+    demoForm.hidden = !demoForm.hidden;
+    demoToggle.setAttribute("aria-expanded", String(!demoForm.hidden));
+    if (!demoForm.hidden) document.getElementById("demo-id").focus();
+  });
+  demoForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const errorBox = document.getElementById("demo-error");
+    errorBox.innerHTML = "";
+    try {
+      const result = await api("POST", "/api/auth/demo-login", {
+        id: document.getElementById("demo-id").value,
+        password: document.getElementById("demo-pw").value,
+        returnTo
+      });
+      location.href = withClaimed(result.returnTo || returnTo, result.claimed);
+    } catch (error) {
+      errorBox.innerHTML = `<div class="notice notice-err" role="alert">${esc(error.message)}</div>`;
+    }
+  });
 
   document.getElementById("dev-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();

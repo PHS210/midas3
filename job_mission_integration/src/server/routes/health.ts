@@ -37,7 +37,8 @@ export function healthRouter(config: ServerConfig, db: Db, postingsService: Post
       auth: {
         kakao_configured: Boolean(config.auth.kakaoClientId),
         kakao_unlink_configured: Boolean(config.auth.kakaoAdminKey),
-        dev_login: config.auth.devLogin
+        dev_login: config.auth.devLogin,
+        demo_login: config.auth.demoLogin
       },
       postings: postingsService.getHealth()
     });

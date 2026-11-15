@@ -1,4 +1,5 @@
 import express from "express";
+import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import type { Db } from "../../lib/db/database.js";
 import {
@@ -37,6 +38,7 @@ import { TERMS_VERSION } from "../../lib/auth/terms.js";
 import type { ServerConfig } from "../config.js";
 import { clearCookie, sendApiError, setCookie } from "../http.js";
 import { getAuth, requireCsrf, requireUser } from "../authContext.js";
+import { rateLimit } from "../middleware.js";
 
 const LOGIN_FLOW_TTL_MS = 10 * 60 * 1000;
 const SIGNUP_FLOW_TTL_MS = 15 * 60 * 1000;
@@ -53,6 +55,22 @@ const DevLoginSchema = z.object({
   nickname: z.string().optional(),
   returnTo: z.string().optional()
 });
+
+const DemoLoginSchema = z.object({
+  id: z.string().max(64),
+  password: z.string().max(128),
+  returnTo: z.string().optional()
+});
+
+// 시연용 계정: 여러 사람이 같이 쓰는 고정 계정이다. 기록은 계속 남고, 탈퇴는 막는다.
+export const DEMO_PROVIDER = "demo";
+const DEMO_ACCOUNT = { id: "test", password: "test", nickname: "시연용 계정" };
+
+function sameText(a: string, b: string) {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && timingSafeEqual(left, right);
+}
 
 export interface AuthDeps {
   db: Db;
@@ -176,6 +194,25 @@ export function authRouter({ db, config, fetchImpl = fetch }: AuthDeps) {
     return res.json(result);
   });
 
+  // 시연용 로그인: 아이디·비밀번호가 맞으면 약관 동의 화면 없이 바로 시연용 계정으로 로그인한다.
+  router.post("/api/auth/demo-login", rateLimit({
+    windowMs: 60_000,
+    max: 20,
+    code: "DEMO_LOGIN_RATE_LIMITED",
+    message: "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요."
+  }), (req, res) => {
+    if (!config.auth.demoLogin) return sendApiError(res, 404, "NOT_FOUND", "No API route for POST /api/auth/demo-login.");
+    const parsed = DemoLoginSchema.safeParse(req.body ?? {});
+    const ok = parsed.success
+      && sameText(parsed.data.id.trim(), DEMO_ACCOUNT.id)
+      && sameText(parsed.data.password, DEMO_ACCOUNT.password);
+    if (!ok) return sendApiError(res, 401, "DEMO_LOGIN_FAILED", "아이디 또는 비밀번호가 올바르지 않습니다.");
+    const user = findUserByProvider(db, DEMO_PROVIDER, DEMO_ACCOUNT.id)
+      ?? createUser(db, { provider: DEMO_PROVIDER, providerUserId: DEMO_ACCOUNT.id, nickname: DEMO_ACCOUNT.nickname, termsVersion: TERMS_VERSION });
+    const { claimed } = startSession(res, user);
+    return res.json({ status: "logged_in", returnTo: safeReturnTo(parsed.data!.returnTo), claimed });
+  });
+
   router.get("/api/auth/session", (_req, res) => {
     const auth = getAuth(res);
     res.setHeader("Cache-Control", "no-store");
@@ -183,7 +220,7 @@ export function authRouter({ db, config, fetchImpl = fetch }: AuthDeps) {
       authenticated: Boolean(auth.user),
       user: auth.user ? publicUser(auth.user) : null,
       csrf_token: auth.session?.csrf_token ?? null,
-      providers: { kakao: kakaoEnabled, dev: config.auth.devLogin },
+      providers: { kakao: kakaoEnabled, dev: config.auth.devLogin, demo: config.auth.demoLogin },
       anonymous_results: auth.anonId && !auth.user ? countAnonymousAttempts(db, auth.anonId) : 0,
       terms_version: TERMS_VERSION
     });
@@ -238,6 +275,9 @@ export function authRouter({ db, config, fetchImpl = fetch }: AuthDeps) {
     const user = auth.user!;
     if ((req.body ?? {}).confirm !== "탈퇴") {
       return sendApiError(res, 400, "WITHDRAW_CONFIRM_REQUIRED", "확인 문구 '탈퇴'를 입력해 주세요.");
+    }
+    if (user.provider === DEMO_PROVIDER) {
+      return sendApiError(res, 403, "DEMO_ACCOUNT_LOCKED", "시연용 계정은 탈퇴할 수 없습니다.");
     }
     let kakaoUnlink: "done" | "skipped" | "failed" = "skipped";
     if (user.provider === "kakao") {

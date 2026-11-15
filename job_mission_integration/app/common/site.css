@@ -39,6 +39,8 @@ h2.sec-h{font-size:18px;font-weight:600;margin:32px 0 12px}
 .btn-kakao{background:#fee500;border-color:#fee500;color:#191600;font-weight:600}
 .btn-danger{border-color:rgba(235,87,87,.4);color:var(--dng);background:transparent}
 .btn-sm{min-height:32px;padding:0 10px;font-size:13px}
+.text-btn{background:none;border:0;padding:4px 0;font:inherit;font-size:13px;color:var(--t3);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.text-btn:hover{color:var(--t1)}
 .btn-row{display:flex;flex-wrap:wrap;gap:8px}
 
 .card{background:var(--bg2);border:1px solid var(--b0);border-radius:10px;padding:18px}

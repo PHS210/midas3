@@ -907,6 +907,18 @@
 
 ---
 
+### 2026-11-15 — 시연용 로그인(test/test)
+왜:
+- 발표 시연 때 카카오 계정 없이 바로 로그인해 내 기록·관심 직무를 보여 주기 위해
+
+주요 반영:
+- `POST /api/auth/demo-login`: 아이디 `test`·비밀번호 `test`가 맞으면 약관 동의 화면 없이 고정 계정(provider `demo`)으로 로그인. 처음 한 번만 계정을 만들고 이후에는 같은 계정을 쓰므로 기록이 계속 남는다. 1분에 20번까지
+- 운영(APP_ENV=production)에서도 켜져 있다. `DEMO_LOGIN=false`로 끈다. `/api/auth/session`의 `providers.demo`로 화면에 알린다
+- 시연용 계정은 탈퇴가 막힌다(서버 403 `DEMO_ACCOUNT_LOCKED`, 내 기록 화면에서 탈퇴 칸 대신 안내). 닉네임 변경·기록 지우기·로그아웃은 된다
+- 로그인 화면: 카카오 버튼 아래 작은 글자 버튼 "시연용 로그인" → 누르면 아이디·비밀번호 칸이 열린다
+
+검증: typecheck, check:frontend, unit 101/101, features E2E 10/10
+
 ## Open Items (Next)
 
 0000. 관리자 미션 생성 후속(2026-11-14)

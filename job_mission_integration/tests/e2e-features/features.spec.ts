@@ -388,3 +388,24 @@ test("미션이 빠진 직무로 저장된 결과도 다시 열린다", async ({
   await expect(page.locator(`.jc[data-jc="${GONE}"]`)).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test("시연용 로그인: 작은 글자 버튼을 누르면 아이디·비밀번호 칸이 열리고 test/test로 로그인된다", async ({ page }) => {
+  await page.goto("/login.html");
+  const toggle = page.locator("#demo-toggle");
+  await expect(toggle).toHaveText("시연용 로그인");
+  await expect(page.locator("#demo-form")).toBeHidden();
+  await toggle.click();
+  await expect(page.locator("#demo-form")).toBeVisible();
+
+  await page.fill("#demo-id", "test");
+  await page.fill("#demo-pw", "nope");
+  await page.click("#demo-form button[type=submit]");
+  await expect(page.locator("#demo-error")).toContainText("아이디 또는 비밀번호가 올바르지 않습니다");
+
+  await page.fill("#demo-pw", "test");
+  await page.click("#demo-form button[type=submit]");
+  await page.waitForURL(/\/me\.html/);
+  await expect(page.locator("main")).toContainText("시연용 계정");
+  await expect(page.locator("#withdraw-form")).toHaveCount(0);
+  await expect(page.locator("main")).toContainText("탈퇴할 수 없습니다");
+});

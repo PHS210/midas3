@@ -130,6 +130,7 @@ EVALUATE_RATE_LIMIT_MAX=30
 | `KAKAO_LOGIN_REDIRECT_URI` | 카카오 콘솔에 등록한 Redirect URI. 기본값 `{PUBLIC_BASE_URL}/auth/kakao/callback` |
 | `KAKAO_ADMIN_KEY` | 탈퇴할 때 카카오 연결 끊기(unlink)에 쓰는 어드민 키. 없으면 연결 끊기를 건너뛰고 안내만 한다 |
 | `AUTH_DEV_LOGIN` | `true`이면 카카오 없이 쓰는 개발용 로그인을 켠다(운영에서는 자동으로 꺼짐) |
+| `DEMO_LOGIN` | 시연용 로그인(아이디 `test`, 비밀번호 `test`). 기본값 켜짐이고 운영에서도 동작한다. 여러 사람이 같은 계정을 쓰며 기록은 계속 남고 탈퇴는 막힌다. 끄려면 `false` |
 | `SESSION_IDLE_DAYS` / `SESSION_MAX_DAYS` | 로그인 유지 기간. 기본값 7일(활동 없을 때) / 30일(최대) |
 | `ANONYMOUS_RESULT_RETENTION_HOURS` | 로그인 전 체험 결과 보관 시간. 기본값 `24` |
 

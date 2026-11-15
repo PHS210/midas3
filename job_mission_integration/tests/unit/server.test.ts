@@ -112,6 +112,54 @@ test("로그인: 개발용 로그인은 운영 설정에서 꺼진다", async ()
   }
 });
 
+test("로그인: 시연용 로그인(test/test)은 운영에서도 되고, 같은 계정에 기록이 계속 남으며, 탈퇴는 막힌다", async () => {
+  const srv = await startTestServer({ env: { APP_ENV: "production", AUTH_DEV_LOGIN: "false" } });
+  try {
+    const a = new Client(srv.base);
+    assert.equal((await a.get("/api/auth/session")).json.providers.demo, true);
+    assert.equal((await a.post("/api/auth/demo-login", { id: "test", password: "wrong" })).status, 401);
+    assert.equal((await a.post("/api/auth/demo-login", { id: "admin", password: "test" })).status, 401);
+    assert.equal((await a.post("/api/auth/demo-login", {})).status, 401);
+
+    const login = await a.post("/api/auth/demo-login", { id: "test", password: "test", returnTo: "/jobs.html" });
+    assert.equal(login.status, 200);
+    assert.equal(login.json.status, "logged_in");
+    assert.equal(login.json.returnTo, "/jobs.html");
+    const session = await a.refreshCsrf();
+    assert.equal(session.authenticated, true);
+    assert.equal(session.user.provider, "demo");
+    assert.equal((await a.put("/api/me/interests/K000001080", { memo: "시연" })).status, 200);
+    assert.equal((await a.post("/api/auth/logout")).status, 200);
+
+    // 다른 브라우저에서 다시 로그인해도 같은 계정이고 저장한 내용이 남아 있다
+    const b = new Client(srv.base);
+    await b.post("/api/auth/demo-login", { id: " test ", password: "test" });
+    const again = await b.refreshCsrf();
+    assert.equal(again.user.id, session.user.id);
+    const interests = (await b.get("/api/me/interests")).json;
+    assert.match(JSON.stringify(interests), /K000001080/);
+    assert.equal((srv.db.prepare("SELECT COUNT(*) AS n FROM users WHERE provider = 'demo'").get() as { n: number }).n, 1);
+
+    const withdraw = await b.del("/api/me", { confirm: "탈퇴" });
+    assert.equal(withdraw.status, 403);
+    assert.equal(withdraw.json.error.code, "DEMO_ACCOUNT_LOCKED");
+    assert.equal((srv.db.prepare("SELECT COUNT(*) AS n FROM users WHERE provider = 'demo'").get() as { n: number }).n, 1);
+  } finally {
+    await srv.close();
+  }
+});
+
+test("로그인: DEMO_LOGIN=false면 시연용 로그인이 꺼진다", async () => {
+  const srv = await startTestServer({ env: { DEMO_LOGIN: "false" } });
+  try {
+    const c = new Client(srv.base);
+    assert.equal((await c.post("/api/auth/demo-login", { id: "test", password: "test" })).status, 404);
+    assert.equal((await c.get("/api/auth/session")).json.providers.demo, false);
+  } finally {
+    await srv.close();
+  }
+});
+
 test("로그인: 세션은 해시로 저장되고 유휴 기간이 지나면 끊긴다", async () => {
   const srv = await startTestServer();
   const c = new Client(srv.base);

@@ -82,19 +82,19 @@ function accountHtml() {
   return `<h2 class="sec-h">계정 설정</h2>
     <div class="card">
       <dl class="kv">
-        <dt>로그인</dt><dd>${u.provider === "kakao" ? "카카오" : u.provider === "dev" ? "개발용 계정" : esc(u.provider)}</dd>
+        <dt>로그인</dt><dd>${u.provider === "kakao" ? "카카오" : u.provider === "dev" ? "개발용 계정" : u.provider === "demo" ? "시연용 계정" : esc(u.provider)}</dd>
         <dt>가입일</dt><dd>${formatDate(u.created_at)}</dd>
       </dl>
       <form id="nick-form" style="margin-top:14px"><div class="field"><label for="nick">닉네임</label>
         <div style="display:flex;gap:8px"><input class="input" id="nick" maxlength="20" value="${esc(u.nickname)}"><button class="btn" type="submit" style="white-space:nowrap">변경</button></div></div></form>
       <div class="btn-row"><a class="btn btn-sm" href="/terms.html">이용약관</a><a class="btn btn-sm" href="/privacy.html">개인정보 처리방침</a><button class="btn btn-sm" type="button" id="logout">로그아웃</button></div>
     </div>
-    <div class="card danger-zone">
+    ${u.provider === "demo" ? `<p class="small muted">시연용 계정은 여러 사람이 함께 사용하므로 탈퇴할 수 없습니다.</p>` : `<div class="card danger-zone">
       <strong>회원 탈퇴</strong>
       <p class="small muted" style="margin:6px 0 10px">탈퇴하시면 계정, 체험 기록, 관심 직무, 작성 중인 답안이 즉시 모두 삭제되고 카카오 계정 연결도 해제됩니다. 삭제된 정보는 복구할 수 없습니다.</p>
       <form id="withdraw-form"><div class="field"><label for="withdraw-confirm">확인을 위해 ‘탈퇴’를 입력해 주세요</label>
         <input class="input" id="withdraw-confirm" autocomplete="off"></div><button class="btn btn-danger" type="submit">탈퇴하기</button></form>
-    </div>`;
+    </div>`}`;
 }
 
 function render() {
@@ -133,7 +133,7 @@ function bind() {
     await api("POST", "/api/auth/logout").catch(() => {});
     location.href = "/index.html";
   });
-  document.getElementById("withdraw-form").addEventListener("submit", async (event) => {
+  document.getElementById("withdraw-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const confirmText = document.getElementById("withdraw-confirm").value.trim();
     if (confirmText !== "탈퇴") return toast("‘탈퇴’를 정확히 입력해 주세요.");

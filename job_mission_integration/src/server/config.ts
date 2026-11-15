@@ -50,6 +50,7 @@ export interface ServerConfig {
   evaluationLogRetentionDays: number;
   auth: {
     devLogin: boolean;
+    demoLogin: boolean;
     kakaoClientId: string;
     kakaoClientSecret: string;
     kakaoAdminKey: string;
@@ -115,6 +116,8 @@ export function loadServerConfig(env: NodeJS.ProcessEnv = process.env): ServerCo
     auth: {
       // 개발·테스트용 로그인은 운영(APP_ENV=production)에서는 설정과 상관없이 꺼진다.
       devLogin: envFlag(env.AUTH_DEV_LOGIN) && appEnv !== "production",
+      // 시연용 로그인(아이디 test, 비밀번호 test): 운영에서도 켜져 있다. DEMO_LOGIN=false로 끈다.
+      demoLogin: envFlag(env.DEMO_LOGIN, true),
       kakaoClientId: (env.KAKAO_LOGIN_CLIENT_ID ?? "").trim(),
       kakaoClientSecret: (env.KAKAO_LOGIN_CLIENT_SECRET ?? "").trim(),
       kakaoAdminKey: (env.KAKAO_ADMIN_KEY ?? "").trim(),
