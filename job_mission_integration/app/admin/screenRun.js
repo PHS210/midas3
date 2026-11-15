@@ -162,8 +162,14 @@ function settingsCard(run) {
       <div class="field"><div class="flbl">직업</div><div class="fval">${esc(sel.jobName || "—")}</div></div>
       <div class="field"><div class="flbl">능력단위</div><div>${esc(sel.unitName || "—")}</div></div>
       <div class="field"><div class="flbl">난이도</div><div>${esc(own(DIFFICULTY_LABELS, sel.difficulty) ?? "—")}</div></div>
+      ${sel.fast ? `<div class="field"><div class="flbl">속도</div><div>빠른 모드</div></div>` : ""}
     </div>
   </div>`;
+}
+
+// 그 실행의 속도에 맞는 예상 시간 표(상태 응답의 estimates 또는 estimatesFast)
+function estimatesFor(run, status) {
+  return run.selection?.fast ? status?.estimatesFast : status?.estimates;
 }
 
 function logText(run) {
@@ -572,12 +578,12 @@ export function mount(view, ctx, params) {
       state.stageId = stage;
     }
     if (state.since === null) state.since = state.reviewOnly ? now : saneTime(run.createdAt, now);
-    const expected = state.reviewOnly ? "—" : estimateText(ctx.status?.estimates, run.selection?.difficulty, Boolean(run.selection?.review)).time;
+    const expected = state.reviewOnly ? "—" : estimateText(estimatesFor(run, ctx.status), run.selection?.difficulty, Boolean(run.selection?.review)).time;
     const elapsed = `경과 ${clockText(now - state.since)}`;
     setText(box, "now-text", nowText(run));
     setText(box, "elapsed", expected === "—" ? elapsed : `${elapsed} · 예상 ${expected}`);
     const bar = box.querySelector('[data-role="bar"]');
-    if (bar) bar.style.width = `${runningPercent(run, ctx.status?.estimates, now - state.stageSince).toFixed(1)}%`;
+    if (bar) bar.style.width = `${runningPercent(run, estimatesFor(run, ctx.status), now - state.stageSince).toFixed(1)}%`;
   }
 
   // 다 만든 모습: 단계는 받은 그대로, 막대는 끝까지, 스피너 대신 확인 표시

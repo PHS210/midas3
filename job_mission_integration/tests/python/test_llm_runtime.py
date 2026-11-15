@@ -294,6 +294,15 @@ class AnthropicSpeedTest(unittest.TestCase):
         self.assertNotIn("speed", request)
         self.assertEqual((result["speed"], result["speed_fallback"]), ("standard", False))
 
+    def test_standard_setting_means_normal_speed(self):
+        """화면에서 빠른 모드를 끄면 서버가 standard를 넘긴다. 설정 파일에 fast가 있어도 보통 속도로 돈다."""
+
+        client = FakeClient(response())
+        result = self.call(client, ANTHROPIC_GENERATION_SPEED="standard")
+        _path, request = client.calls[0]
+        self.assertNotIn("speed", request)
+        self.assertEqual((result["speed"], result["speed_fallback"]), ("standard", False))
+
     def test_fast_setting_is_sent_and_recorded(self):
         client = FakeClient(response())
         result = self.call(client, ANTHROPIC_GENERATION_SPEED="fast")
@@ -330,7 +339,7 @@ class AnthropicSpeedTest(unittest.TestCase):
 
     def test_unknown_speed_value_raises(self):
         with isolated_env(ANTHROPIC_GENERATION_SPEED="turbo"):
-            with self.assertRaisesRegex(ValueError, "ANTHROPIC_GENERATION_SPEED must be fast or empty, got 'turbo'"):
+            with self.assertRaisesRegex(ValueError, "ANTHROPIC_GENERATION_SPEED must be fast, standard or empty, got 'turbo'"):
                 RuntimeConfig(provider="anthropic")
 
     def test_openai_config_has_no_speed(self):

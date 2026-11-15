@@ -122,6 +122,13 @@ CREATE TABLE admin_generation_daily (
   started INTEGER NOT NULL
 );
 `
+  },
+  {
+    // 관리자 미션 생성: 실행마다 속도(standard | fast)를 남긴다. 이 칸이 생기기 전의 기록은 보통 속도다.
+    version: 3,
+    sql: `
+ALTER TABLE admin_generation_runs ADD COLUMN speed TEXT NOT NULL DEFAULT 'standard';
+`
   }
 ];
 

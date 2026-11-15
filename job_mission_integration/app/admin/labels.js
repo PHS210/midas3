@@ -105,7 +105,7 @@ export function renamePieces(text) {
   return String(text ?? "").replace(PIECE_IN_TEXT, (id) => pieceName(id));
 }
 
-// 예상 소요와 비용. 시간은 30초 단위로 반올림한다
+// 예상 소요와 비용. 시간은 30초 단위로 올림한다(예상보다 오래 걸리는 쪽보다 일찍 끝나는 쪽이 낫다). 1분이 안 되면 "1분 이내"
 export function estimateText(estimates, difficulty, review) {
   const entry = estimates && typeof estimates === "object" ? own(estimates, difficulty) : undefined;
   if (!entry?.generate) return { time: "—", cost: "—" };
@@ -118,11 +118,10 @@ export function estimateText(estimates, difficulty, review) {
 }
 
 function minutesText(totalSeconds) {
-  let seconds = Math.round(totalSeconds / 30) * 30;
-  if (seconds <= 0 && totalSeconds > 0) seconds = 30;   // 30초가 안 돼도 "약 0초"로 쓰지 않는다
+  if (totalSeconds < 60) return "1분 이내";   // 1분이 안 되면 초를 말하지 않는다
+  const seconds = Math.ceil(totalSeconds / 30) * 30;
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
-  if (!minutes) return `약 ${rest}초`;
   return rest ? `약 ${minutes}분 ${rest}초` : `약 ${minutes}분`;
 }
 

@@ -28,7 +28,7 @@ import {
   snapshotCatalog,
   type CatalogSnapshot
 } from "./catalogFile.js";
-import { DIFFICULTIES, type CommandOutcome, type Difficulty, type GenerationCommands, type PreflightResult, type TargetInput } from "./commands.js";
+import { DIFFICULTIES, type CommandOutcome, type Difficulty, type GenerationCommands, type GenerationSpeed, type PreflightResult, type TargetInput } from "./commands.js";
 import type { NcsCatalog, SelectedLink } from "./ncsCatalog.js";
 import { applyProgressLine, initialProgress, type ProgressState, type Stage } from "./progress.js";
 import { readReview, readRunArtifacts, runDirFor, type ReviewVerdict } from "./runFiles.js";
@@ -38,6 +38,7 @@ import { readReview, readRunArtifacts, runDirFor, type ReviewVerdict } from "./r
 
 export interface StartInput extends TargetInput {
   review: boolean;
+  fast?: boolean; // 빠른 모드. 하루 건수를 2건 쓴다
 }
 
 export interface StageView {
@@ -60,6 +61,7 @@ export interface RunListItem {
     linkKind: string;
     difficulty: Difficulty;
     review: boolean;
+    fast: boolean;
     allowedMaterialTypes: string[] | null;
   };
   createdAt: string;
@@ -104,6 +106,7 @@ export interface GenerationStatus {
   narrowing: boolean;
   activeRunId: string | null;
   estimates: Record<Difficulty, { generate: { seconds: number; usd: number }; review: { seconds: number; usd: number } }>;
+  estimatesFast: Record<Difficulty, { generate: { seconds: number }; review: { seconds: number } }>;
 }
 
 // 실제 호출 확인에서 난이도마다 한 건씩 잰 값을 어림한 고정 숫자.
@@ -112,6 +115,14 @@ const ESTIMATES: GenerationStatus["estimates"] = {
   normal: { generate: { seconds: 75, usd: 0.28 }, review: { seconds: 20, usd: 0.05 } },
   hard: { generate: { seconds: 125, usd: 0.4 }, review: { seconds: 40, usd: 0.12 } }
 };
+// 빠른 모드의 예상 시간. 잰 것은 보통 난이도 한 건(설계 15.7초, 작성 14.0초, 검수 10초)이고,
+// 쉬움과 어려움은 보통 속도 값에 같은 비율(생성 0.4배, 검수 0.5배)을 곱한 어림이다.
+const ESTIMATES_FAST: GenerationStatus["estimatesFast"] = {
+  easy: { generate: { seconds: 24 }, review: { seconds: 10 } },
+  normal: { generate: { seconds: 30 }, review: { seconds: 10 } },
+  hard: { generate: { seconds: 50 }, review: { seconds: 20 } }
+};
+const FAST_START_COUNT = 2;   // 빠른 모드 한 건이 쓰는 하루 건수
 const PREFLIGHT_CACHE_MS = 60_000;
 const LOG_LIMIT = 500;
 const STAGE_ORDER: StageView["id"][] = ["blueprint", "blueprint_check", "writing", "mission_check", "review", "approval"];
@@ -138,6 +149,11 @@ function parseTypes(raw: string | null): string[] | null {
   } catch {
     return null;
   }
+}
+
+// 기록의 속도 칸 → 명령에 넘길 값. 모르는 값은 보통 속도로 본다
+function speedOf(value: string): GenerationSpeed {
+  return value === "fast" ? "fast" : "standard";
 }
 
 function stageIndex(stage: string) {
@@ -222,7 +238,8 @@ export class AdminGenerationService {
       today: { day, started: getGenerationStartCount(this.db, day), limit: this.config.adminGeneration.dailyLimit },
       narrowing: this.config.adminGeneration.narrow,
       activeRunId: this.activeRunId,
-      estimates: ESTIMATES
+      estimates: ESTIMATES,
+      estimatesFast: ESTIMATES_FAST
     };
   }
 
@@ -266,7 +283,8 @@ export class AdminGenerationService {
       const day = seoulDay(this.now());
       const started = getGenerationStartCount(this.db, day);
       const limit = this.config.adminGeneration.dailyLimit;
-      if (started >= limit) throw new ApiError(429, "GENERATION_DAILY_LIMIT", "Daily generation limit reached.", { started, limit });
+      const needed = input.fast ? FAST_START_COUNT : 1;
+      if (started + needed > limit) throw new ApiError(429, "GENERATION_DAILY_LIMIT", "Daily generation limit reached.", { started, limit, needed });
 
       const preflight = await this.freshPreflight();
       if (!preflight.ok) {
@@ -279,8 +297,8 @@ export class AdminGenerationService {
       if (!plan.ok) throw new ApiError(500, plan.code, plan.message || "Target file could not be written.");
 
       insertGenerationRun(this.db, this.newRow(runId, input, link, plan.allowedMaterialTypes));
-      addGenerationStart(this.db, day);
-      this.log(runId, "system", `생성 시작: ${link.jobCode} ${link.execJobId} ${link.unitKey} ${input.difficulty}`);
+      addGenerationStart(this.db, day, needed);
+      this.log(runId, "system", `생성 시작: ${link.jobCode} ${link.execJobId} ${link.unitKey} ${input.difficulty}${input.fast ? " fast" : ""}`);
       this.track(this.runGeneration(runId, input, targetFile));
       launched = true;
       return this.get(runId) as RunView;
@@ -390,7 +408,7 @@ export class AdminGenerationService {
     this.track(
       (async () => {
         try {
-          await this.reviewRun(runId, runDir, row.job_code, row.difficulty);
+          await this.reviewRun(runId, runDir, row.job_code, row.difficulty, speedOf(row.speed));
         } catch (error) {
           updateGenerationRun(this.db, runId, { review_verdict: "review_failed" });
           this.log(runId, "system", `검수 실패: ${error instanceof Error ? error.message : String(error)}`);
@@ -550,6 +568,7 @@ export class AdminGenerationService {
       link_kind: link.linkKind,
       difficulty: input.difficulty,
       review_requested: input.review ? 1 : 0,
+      speed: input.fast ? "fast" : "standard",
       allowed_material_types: allowed ? JSON.stringify(allowed) : null,
       run_folder: null,
       mission_id: null,
@@ -578,7 +597,8 @@ export class AdminGenerationService {
         state = next;
         if (changed) updateGenerationRun(this.db, runId, { stage: state.stage, run_folder: state.runFolder, rewrites: JSON.stringify(state.rewrites) });
       };
-      const outcome = await this.commands.generate(targetFile, onLine);
+      const speed: GenerationSpeed = input.fast ? "fast" : "standard";
+      const outcome = await this.commands.generate(targetFile, onLine, speed);
       if (outcome.timedOut) return this.fail(runId, "GENERATION_TIMEOUT", "Generation took too long and was stopped.");
       if (outcome.spawnError) return this.fail(runId, "GENERATION_PYTHON_UNAVAILABLE", outcome.spawnError);
       const runDir = state.runFolder ? runDirFor(this.config.paths.outputs, state.runFolder) : null;
@@ -588,7 +608,7 @@ export class AdminGenerationService {
         return this.fail(runId, artifacts.failureCode ?? state.failureCode ?? "GENERATION_NOT_SAVED", lastLines(outcome));
       }
       updateGenerationRun(this.db, runId, { mission_id: artifacts.missionId, mission_title: artifacts.missionTitle });
-      if (input.review) await this.reviewRun(runId, runDir, input.jobCode, input.difficulty);
+      if (input.review) await this.reviewRun(runId, runDir, input.jobCode, input.difficulty, speed);
       updateGenerationRun(this.db, runId, { status: "ready", stage: "done", finished_at: this.now().toISOString() });
       this.log(runId, "system", "검토 대기");
     } catch (error) {
@@ -599,9 +619,9 @@ export class AdminGenerationService {
   }
 
   // 검수: 프로세스가 죽거나 시간이 넘어도 미션은 남는다. 판정만 review_failed가 된다.
-  protected async reviewRun(runId: string, runDir: string, jobCode: string, difficulty: string) {
+  protected async reviewRun(runId: string, runDir: string, jobCode: string, difficulty: string, speed: GenerationSpeed) {
     updateGenerationRun(this.db, runId, { stage: "review" });
-    const outcome = await this.commands.review(runDir, (line) => this.log(runId, "stdout", line));
+    const outcome = await this.commands.review(runDir, (line) => this.log(runId, "stdout", line), speed);
     const verdict: ReviewVerdict = outcome.timedOut || outcome.spawnError ? "review_failed" : readReview(runDir, jobCode, difficulty).verdict;
     updateGenerationRun(this.db, runId, { review_verdict: verdict });
     this.log(runId, "system", `검수 판정: ${verdict}`);
@@ -628,6 +648,7 @@ export class AdminGenerationService {
         linkKind: row.link_kind,
         difficulty: row.difficulty as Difficulty,
         review: row.review_requested === 1,
+        fast: row.speed === "fast",
         allowedMaterialTypes: parseTypes(row.allowed_material_types)
       },
       createdAt: row.created_at,

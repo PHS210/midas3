@@ -109,8 +109,9 @@ export const adminApi = {
   sentences: (jobCode) => request("GET", `/jobs/${encodeURIComponent(String(jobCode))}/sentences`),   // { job, sentences }
   materialTypes: ({ jobCode, execJobId, unitKey, difficulty }) =>
     request("GET", `/material-types${query({ jobCode, execJobId, unitKey, difficulty })}`),
-  startRun: ({ jobCode, execJobId, unitKey, difficulty, review }) =>
-    request("POST", "/runs", { body: { jobCode, execJobId, unitKey, difficulty, review: Boolean(review) } }),   // 202, { run }
+  startRun: ({ jobCode, execJobId, unitKey, difficulty, review, fast }) =>
+    // fast는 켰을 때만 싣는다(이 칸을 모르는 예전 서버에서도 보통 속도 생성은 그대로 된다)
+    request("POST", "/runs", { body: { jobCode, execJobId, unitKey, difficulty, review: Boolean(review), ...(fast ? { fast: true } : {}) } }),   // 202, { run }
   runs: (limit) => request("GET", `/runs${query({ limit })}`),                              // { runs }
   run: (runId) => request("GET", runPath(runId)),                                           // { run }
   rerunReview: (runId) => request("POST", `${runPath(runId)}/review`),                     // { run }

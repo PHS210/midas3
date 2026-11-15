@@ -120,6 +120,7 @@ svg{flex:none}
 .tchip.on{background:var(--ac-bg);border-color:var(--ac-line);color:#c3c9ff;font-weight:600}
 .tchip.off{opacity:.38;cursor:not-allowed;border-style:dashed}
 .toggle{display:flex;align-items:center;gap:9px}
+.toggle .swnote{margin-left:auto;font-size:12px;color:var(--tx3);text-align:right}
 .sw{width:30px;height:17px;border-radius:999px;background:var(--ac);position:relative;flex:none}
 .sw::after{content:"";position:absolute;right:2px;top:2px;width:13px;height:13px;border-radius:50%;background:#fff}
 .hr{height:1px;background:var(--line);margin:14px 0}
