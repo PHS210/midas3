@@ -155,9 +155,18 @@ function doneM() { return 0; }
 function isLast() { return true; }
 
 const APP = document.getElementById("app");
+// 체험 영역(#simulation)은 긴 첫 페이지 중간에 있어, 단계가 바뀌어 화면이 짧아지면 아래 구역이 보인다.
+// 그래서 단계가 바뀔 때는 체험 영역 맨 위로 스크롤을 맞춘다.
+function scrollToSimulation() {
+  document.getElementById("simulation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+let renderedScreen = null;
 function render({ scroll = true } = {}) {
   const fn = { select: rSelect, preq: rPreq, "mission-list": rMissionList, mission: rMission, result: rResult, retry: rRetry }[state.screen];
   if (fn) {
+    // 같은 단계 안에서 다시 그릴 때(카드 선택 등)는 스크롤을 건드리지 않는다.
+    const screenChanged = renderedScreen !== null && renderedScreen !== state.screen;
+    renderedScreen = state.screen;
     // 이전 결과 화면의 지도(Leaflet 인스턴스)를 먼저 정리해야 다시 그릴 때 충돌하지 않는다.
     unmountPostingsSection();
     const notice = pendingNotice && (state.screen === "select" || state.screen === "preq")
@@ -167,6 +176,7 @@ function render({ scroll = true } = {}) {
     APP.innerHTML = notice + fn();
     document.body.dataset.screen = state.screen;
     if (state.screen === "result" && scroll) window.scrollTo({ top: 0, behavior: "smooth" });
+    else if (state.screen !== "result" && scroll && screenChanged) scrollToSimulation();
     bindEvents();
     if (state.screen === "result") {
       mountPostings();
@@ -655,7 +665,8 @@ function flowContext() {
     startMission,
     onAnswerInput: scheduleDraftSave,
     onAnswerSubmitted,
-    onResultShown: () => void saveAttemptSnapshot()
+    onResultShown: () => void saveAttemptSnapshot(),
+    scrollToSimulation
   };
   return {
     ...ctx,

@@ -321,6 +321,28 @@ test("관심 직무: 메모가 저장 뒤에도 유지되고, 탐색 화면에 �
   await expect(card.locator(".memo-text")).toContainText("공모전");
 });
 
+test("체험 단계가 바뀌면 화면이 체험 영역 맨 위로 맞춰진다", async ({ page }) => {
+  // 직무 선택 화면은 카드가 많아 길다. 아래쪽에서 다음 단계로 넘어가도 체험 영역이 화면에 남아야 한다.
+  const simulationAtTop = async () => {
+    const top = await page.locator("#simulation").evaluate((el) => Math.round(el.getBoundingClientRect().top));
+    return top >= 0 && top <= 120;
+  };
+  await page.goto("/");
+  await page.locator(".jc").nth(40).click();
+  await page.locator("#btn-start").click();
+  await expect(page.locator("#btn-pnext")).toBeVisible();
+  await expect.poll(simulationAtTop).toBe(true);
+
+  await page.locator("#btn-pnext").click();
+  await expect(page.locator(".mc").first()).toBeVisible();
+  await expect.poll(simulationAtTop).toBe(true);
+
+  await page.locator(".mc").last().click();
+  await page.locator("#btn-ml-start").click();
+  await expect(page.locator("#work-request")).toBeVisible();
+  await expect.poll(simulationAtTop).toBe(true);
+});
+
 // ── 미션 카탈로그 교체 뒤 회귀 테스트 ─────────────────────────
 test("미션이 빠진 직무로 저장된 결과도 다시 열린다", async ({ page }) => {
   await stubExternal(page);
