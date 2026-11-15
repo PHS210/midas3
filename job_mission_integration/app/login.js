@@ -20,7 +20,7 @@ function renderLogin(session) {
   main.innerHTML = `
     <div class="eyebrow">계정</div>
     <h1 class="page-h">로그인</h1>
-    <p class="page-sub">직무 탐색, 비교, 체험은 로그인 없이 이용하실 수 있습니다. 관심 직무 저장과 내 기록 기능을 이용하시려면 로그인이 필요합니다.</p>
+    <p class="page-sub">직무 탐색과 체험은 로그인 없이 이용하실 수 있습니다. 관심 직무 저장과 내 기록 기능을 이용하시려면 로그인이 필요합니다.</p>
     ${error ? `<div class="notice notice-err" role="alert">${esc(ERROR_MESSAGES[error] || ERROR_MESSAGES.failed)}</div>` : ""}
     ${anon ? `<div class="notice notice-ok">이 브라우저에서 로그인 전에 완료한 체험 결과가 ${anon}건 있습니다. 로그인하시면 내 기록으로 옮겨 드립니다.</div>` : ""}
     <div class="card">

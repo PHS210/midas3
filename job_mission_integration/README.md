@@ -332,8 +332,7 @@ python scripts/export_missions.py --rebuild-index
 | 화면 | 주소 | 내용 |
 | --- | --- | --- |
 | 직무 탐색 | `/jobs.html` | KNOW 537개 직무, 이름·일상어 검색, 분야·체험 가능 필터, 최근 본 직무 |
-| 직무 상세 | `/job.html?code=K…` | 하는 일·역량·환경·임금·전망(출처·조사연도), 비슷한 직무, 관심 저장·메모, 비교 담기 |
-| 직무 비교 | `/compare.html` | 최대 3개, 브라우저에 유지, 적합도 점수는 넣지 않음 |
+| 직무 상세 | `/job.html?code=K…` | 하는 일·역량·환경·임금·전망(출처·조사연도), 비슷한 직무, 관심 저장·메모 |
 | 로그인 | `/login.html` | 카카오 로그인, 가입(약관·개인정보·만 14세 확인), 개발용 로그인 |
 | 내 기록 | `/me.html` | 완료한 체험 다시 보기·지우기, 쓰던 답안 이어 쓰기, 관심 직무, 닉네임·로그아웃·탈퇴 |
 | 약관 | `/terms.html`, `/privacy.html` | 이용약관과 개인정보 처리방침. 연락처 자리(`[배포 전에 …]`)에 팀 연락처를 넣는다 |
@@ -417,7 +416,7 @@ npm run check:frontend
 npm run test:unit            # 채용공고·지역·채점기·서버(로그인·기록·직무 API)·탐색/요구역량/품질 지표·관리자 미션 생성(경로, 화면의 말) 단위 테스트
 npm run test:e2e             # 기존 smoke
 npm run test:e2e:postings    # 채용공고 섹션 E2E(고정 데이터, 8091 포트, 데스크톱·모바일)
-npm run test:e2e:features    # 탐색·상세·비교·로그인·내 기록·재도전·결과 카드 E2E(8092 포트, 가짜 채점·개발용 로그인)
+npm run test:e2e:features    # 탐색·상세·로그인·내 기록·재도전·결과 카드 E2E(8092 포트, 가짜 채점·개발용 로그인)
 npm run test:e2e:admin       # 관리자 화면 E2E(8093 포트, 가짜 생성 모드, 복사한 미션 폴더 test-results/admin-missions)
 ```
 

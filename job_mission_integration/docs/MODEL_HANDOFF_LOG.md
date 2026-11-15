@@ -905,6 +905,25 @@
 - typecheck 통과, check:frontend 34/34, test:unit 99/99, test:e2e 4/4, test:e2e:postings 6/6, test:e2e:features 9/9, test:e2e:admin 2/2
 - 브라우저로 직무 탐색 · 직무 상세 · 비교 · 체험 전 질문 · 미션 목록 · 미션 수행 · 결과 화면을 열어 남은 반말 문장이 없는지 훑어봄(남은 것은 미션 제목뿐)
 
+### 2026-11-15 — 직무 비교 기능을 뺌
+왜:
+- 직무 비교(후보 직무를 최대 3개까지 나란히 보는 화면)를 서비스에서 빼기로 함
+
+바뀐 것:
+- 지운 파일: `app/compare.html`, `app/compare.js`, `app/common/compareTray.js`
+- 상단 메뉴와 첫 화면의 "비교" 링크를 뺌: `app/common/site.js`(메뉴, 비교 개수 배지), `app/index.html`(상단 메뉴, 아래쪽 링크)
+- "비교 담기" 버튼과 비교 바를 뺌: 직무 탐색(`app/jobs.js`), 직무 상세(`app/job.js`), 내 기록(`app/me.js`). 내 기록의 "비교 선택" 체크박스와 "선택한 관심 직무 비교하기" 버튼도 뺌
+- 서버: `GET /api/jobs/compare`를 뺌(`src/server/routes/jobs.ts`)
+- 쓰지 않게 된 스타일을 뺌: `app/common/site.css`(`.compare-tray`, `.site-badge`, `.pick-label`)
+- 안내 문구에서 비교를 뺌: 로그인 화면(`app/login.js`), 이용약관(`app/terms.html`), 개인정보 처리방침(`app/privacy.html`의 "비교함" 문구). 수집 항목과 보관 기간은 그대로라 약관 버전은 바꾸지 않음
+- 테스트: 비교 E2E 1개를 지우고, 관심 직무 E2E는 메모 저장과 탐색 화면 표시만 확인하게 줄임(`tests/e2e-features/features.spec.ts`). 직무 API 단위 테스트에서 비교 확인을 뺌(`tests/unit/server.test.ts`)
+- `README.md`의 화면 표와 검사 설명, `playwright.features.config.ts`의 설명을 맞춤
+- 그대로 둔 것: 관심 직무 저장·메모, 결과 화면의 "공고가 요구하는 역량 vs 내 결과"(비교 화면과 다른 기능)
+
+검증:
+- typecheck 통과, check:frontend 32/32, test:unit 99/99, test:e2e 4/4, test:e2e:postings 6/6, test:e2e:features 8/8, test:e2e:admin 2/2
+- 브라우저로 첫 화면 · 직무 탐색 · 직무 상세를 열어 비교 메뉴와 버튼이 없는지 확인. `/compare.html`은 404, `/api/jobs/compare`는 직업코드 오류(400)로 답함. 로그인한 내 기록 화면은 E2E로 확인
+
 ---
 
 ## Open Items (Next)
