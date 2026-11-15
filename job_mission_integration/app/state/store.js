@@ -36,12 +36,16 @@ export function createInitialState() {
     pendingScores: [],
     resultSummary: null,
     resultError: null,
-    // 체험 기록: 서버 attempt id(제출한 미션의 해설을 열 때 쓴다)
+    // 체험 기록(U02): 서버 attempt id, 저장 위치('account' | 'anonymous' | 'failed')
     attemptId: null,
+    attemptSave: null,
+    // 저장된 결과를 다시 볼 때 { date, outdated }
+    viewingAttempt: null,
     // 체험 후 질문(U22): { post: { [jobCode]: { interest, difficulty, again, submitted } } }
     selfReports: { post: {} },
     // 재도전(U21): { missionKey, first, second, draft }
-    retry: null
+    retry: null,
+    draftStatus: null
   };
 }
 

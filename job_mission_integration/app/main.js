@@ -18,7 +18,13 @@ import {
   sendEvaluationLogRequest,
   evaluateAnswerRequest,
   recommendationsRequest,
+  getAuthSession,
   createAttemptRequest,
+  completeAttemptRequest,
+  getAttemptRequest,
+  getDraftRequest,
+  saveDraftRequest,
+  deleteDraftRequest,
   jobsByAxisRequest,
   postingRequirementsRequest,
   missionExplanationRequest
@@ -103,6 +109,7 @@ let JOB_INFO = {};
 let ALL_MISSIONS = [];
 let MISSIONS_INDEX = null;
 let LOAD_ERROR = null;
+let SESSION = { authenticated: false };
 // URL로 들어왔는데 열 수 없을 때 선택 화면 위에 한 번 보여줄 안내
 let pendingNotice = null;
 
@@ -337,15 +344,18 @@ let attemptPromise = null;
 
 // 미션을 시작할 때 체험 기록을 만든다. 실패해도 체험은 계속할 수 있다(결과만 저장되지 않음).
 function ensureAttempt() {
+  if (state.viewingAttempt) return Promise.resolve(null);
   if (state.attemptId) return Promise.resolve(state.attemptId);
   if (!attemptPromise) {
     attemptPromise = createAttemptRequest({ jobCodes: state.selectedJobs, preAnswers: state.preqAnswers })
       .then((data) => {
         state.attemptId = data.attempt.id;
+        state.attemptSave = data.attempt.saved_to_account ? "account" : "anonymous";
         return state.attemptId;
       })
       .catch((error) => {
         console.warn("체험 기록을 만들지 못했어", error);
+        state.attemptSave = "failed";
         return null;
       })
       .finally(() => { attemptPromise = null; });
@@ -353,13 +363,142 @@ function ensureAttempt() {
   return attemptPromise;
 }
 
+function buildSnapshot() {
+  return {
+    selectedJobs: state.selectedJobs,
+    preqAnswers: state.preqAnswers,
+    missionScores: state.missionScores,
+    evaluationLogs: (state.evaluationLogs || []).slice(-30),
+    resultSummary: state.resultSummary,
+    selfReports: state.selfReports || { post: {} },
+    retry: state.retry ? { missionKey: state.retry.missionKey, first: state.retry.first || null, second: state.retry.second || null } : null,
+    evalMode: state.evalMode || null,
+    resultError: state.resultError || null
+  };
+}
+
+function refreshResultStatus() {
+  const node = document.getElementById("result-status");
+  if (node) node.innerHTML = renderResultStatus({ state, esc });
+}
+
+// 결과를 처음 보여줄 때, 그리고 체험 후 질문·재도전 뒤에 결과 스냅샷을 다시 저장한다.
+async function saveAttemptSnapshot() {
+  if (state.viewingAttempt && !state.attemptId) return;
+  const attemptId = state.attemptId || await ensureAttempt();
+  if (!attemptId) {
+    refreshResultStatus();
+    return;
+  }
+  try {
+    const data = await completeAttemptRequest(attemptId, buildSnapshot());
+    if (!state.viewingAttempt) state.attemptSave = data.saved_to_account ? "account" : "anonymous";
+  } catch (error) {
+    console.warn("결과를 저장하지 못했어", error);
+    if (!state.viewingAttempt) state.attemptSave = "failed";
+  }
+  refreshResultStatus();
+}
+
+async function openSavedAttempt(attemptId) {
+  try {
+    const data = await getAttemptRequest(attemptId);
+    const snap = data.attempt?.result_snapshot;
+    if (!snap || !Array.isArray(snap.selectedJobs)) {
+      pendingNotice = "이 체험은 결과까지 끝나지 않아서 다시 볼 결과가 없어.";
+      return;
+    }
+    resetState();
+    state.selectedJobs = snap.selectedJobs;
+    state.preqAnswers = snap.preqAnswers || {};
+    state.missionScores = snap.missionScores || {};
+    state.evaluationLogs = snap.evaluationLogs || [];
+    state.resultSummary = snap.resultSummary || null;
+    state.axisProfile = snap.resultSummary?.axisProfile || null;
+    state.compatibility = snap.resultSummary?.compatibility || {};
+    state.selfReports = snap.selfReports?.post ? snap.selfReports : { post: {} };
+    state.retry = snap.retry?.first ? { ...snap.retry } : null;
+    state.resultError = snap.resultError || null;
+    state.evalMode = snap.evalMode || state.evalMode;
+    state.attemptId = data.attempt.id;
+    state.attemptSave = data.attempt.user_id ? "account" : "anonymous";
+    state.viewingAttempt = {
+      date: formatKstDate(data.attempt.completed_at || data.attempt.created_at),
+      outdated: (data.missions || []).some((mission) => mission.mission_outdated)
+    };
+    state.screen = "result";
+  } catch (error) {
+    pendingNotice = error?.status === 404
+      ? "그 기록을 찾을 수 없어. 기록을 만든 계정(또는 브라우저)으로 열어줘."
+      : "기록을 불러오지 못했어. 잠시 뒤에 다시 해줘.";
+  }
+}
+
+function formatKstDate(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+}
+
+// ── 쓰던 답안 자동 저장(로그인한 경우) ─────────────────────
+let draftTimer = null;
+
+function setDraftStatus(text) {
+  state.draftStatus = text;
+  const node = document.getElementById("draft-status");
+  if (node) node.textContent = text;
+}
+
+function scheduleDraftSave() {
+  if (!SESSION.authenticated) return;
+  const mission = curMission();
+  if (!mission?.key) return;
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(async () => {
+    const answer = state.missionAnswer;
+    if (!answer.trim() || state.screen !== "mission") return;
+    try {
+      await saveDraftRequest(mission.key, answer.slice(0, 3000));
+      setDraftStatus(`자동 저장됨 · ${formatKstDate(new Date().toISOString()).slice(-5)}`);
+    } catch (_) {
+      setDraftStatus("자동 저장에 실패했어. 답안은 화면에 그대로 있어.");
+    }
+  }, 1200);
+}
+
+async function loadDraftIntoMission() {
+  if (!SESSION.authenticated) return;
+  const mission = curMission();
+  if (!mission?.key) return;
+  try {
+    const { draft } = await getDraftRequest(mission.key);
+    if (state.screen !== "mission" || curMission()?.key !== mission.key) return;
+    if (draft?.answer && !state.missionAnswer.trim()) {
+      state.missionAnswer = draft.answer;
+      const input = document.getElementById("m-ans");
+      if (input) input.value = draft.answer;
+      refreshMissionNextButtonAction({ state, getCurrentMission: curMission });
+      setDraftStatus(`${formatKstDate(draft.updated_at)}에 쓰던 답안을 불러왔어.`);
+    }
+  } catch (error) {
+    if (error?.status !== 404) console.warn("쓰던 답안을 불러오지 못했어", error);
+  }
+}
+
+function onAnswerSubmitted(mission) {
+  clearTimeout(draftTimer);
+  if (SESSION.authenticated && mission?.key) deleteDraftRequest(mission.key).catch(() => {});
+}
+
 function startMission() {
   state.screen = "mission";
   state.missionStepIndex = 0;
   state.missionAnswer = "";
   state.selectedOption = null;
+  state.draftStatus = SESSION.authenticated ? "" : "로그인하면 쓰던 답안이 자동으로 저장돼.";
   void ensureAttempt();
   render();
+  void loadDraftIntoMission();
 }
 
 // ── 결과 화면 확장 ───────────────────────────────────────
@@ -389,6 +528,7 @@ function bindResultExtras() {
     if (box) box.outerHTML = `<div class="notice notice-ok" id="post-survey-done">고마워! 답변을 저장했어.</div>`;
     const slot = byId("interest-change-slot");
     if (slot) slot.innerHTML = renderInterestChange({ state, jobDefs: resultJobDefs(), esc });
+    void saveAttemptSnapshot();
   });
 
   document.querySelectorAll(".hl-btn").forEach((button) => button.addEventListener("click", () => {
@@ -471,6 +611,7 @@ function bindRetryScreen() {
       state.screen = "result";
       render({ scroll: false });
       document.getElementById("retry-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      void saveAttemptSnapshot();
     } catch (error) {
       if (button) {
         button.disabled = false;
@@ -512,6 +653,9 @@ function flowContext() {
     resetState,
     ensureAttempt,
     startMission,
+    onAnswerInput: scheduleDraftSave,
+    onAnswerSubmitted,
+    onResultShown: () => void saveAttemptSnapshot()
   };
   return {
     ...ctx,
@@ -522,13 +666,30 @@ function flowContext() {
 
 function bindEvents() { bindAppEvents(flowContext()); }
 
-// /index.html?job=CODE · ?mission=KEY 로 바로 들어온 경우
+function updateNavUser() {
+  const link = document.getElementById("nav-user");
+  if (!link) return;
+  if (SESSION.authenticated) {
+    link.textContent = SESSION.user?.nickname || "내 계정";
+    link.href = "./me.html";
+  } else {
+    link.textContent = "로그인";
+    link.href = `./login.html?return=${encodeURIComponent("/index.html#simulation")}`;
+  }
+}
+
+// /index.html?job=CODE · ?mission=KEY(&resume=1) · ?attempt=ID 로 바로 들어온 경우
 async function applyUrlParams() {
   const params = new URLSearchParams(location.search);
+  const attemptId = params.get("attempt");
   const jobCode = params.get("job");
   const missionKey = params.get("mission");
-  if (!jobCode && !missionKey) return false;
+  if (!attemptId && !jobCode && !missionKey) return false;
   history.replaceState(null, "", `${location.pathname}#simulation`);
+  if (attemptId) {
+    await openSavedAttempt(attemptId);
+    return true;
+  }
   if (missionKey) {
     const mission = ALL_MISSIONS.find((m) => m.key === missionKey);
     if (!mission) {
@@ -539,7 +700,7 @@ async function applyUrlParams() {
     state.selectedMissionKey = mission.key;
     state.missionJobIndex = 0;
     state.preqIndex = 0;
-    state.screen = "preq";
+    state.screen = params.get("resume") === "1" ? "mission-start" : "preq";
     return true;
   }
   if (JOB_DEFS.some((job) => job.job_code === jobCode)) {
@@ -559,6 +720,7 @@ async function bootstrap() {
     <div class="boot-msg">미션을 불러오는 중…</div>
     <div class="boot-sub">missions/index.json 과 각 미션 JSON 을 가져오고 있어요.</div>
   </div>`;
+  const sessionPromise = getAuthSession();
   try {
     let catalog;
     try {
@@ -593,8 +755,14 @@ async function bootstrap() {
     </div>`;
     return;
   }
+  SESSION = await sessionPromise;
+  updateNavUser();
   const fromUrl = await applyUrlParams();
-  render({ scroll: false });
+  if (state.screen === "mission-start") {
+    startMission();
+  } else {
+    render({ scroll: false });
+  }
   if (fromUrl) document.getElementById("simulation")?.scrollIntoView({ behavior: "smooth" });
 }
 window.goSim = function () {

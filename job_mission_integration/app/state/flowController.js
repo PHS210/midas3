@@ -40,7 +40,9 @@ export function bindAppEvents(ctx) {
     resetState,
     getMissionsByJobCode,
     ensureAttempt = () => Promise.resolve(null),
-    startMission
+    startMission,
+    onAnswerInput = () => {},
+    onAnswerSubmitted = () => {}
   } = ctx;
 
   document.querySelectorAll(".jc").forEach((element) => element.addEventListener("click", () => {
@@ -120,6 +122,7 @@ export function bindAppEvents(ctx) {
   byId("m-ans")?.addEventListener("input", (event) => {
     state.missionAnswer = event.target.value;
     refreshMissionNextButton();
+    onAnswerInput();
   });
 
   byId("btn-mnext")?.addEventListener("click", () => {
@@ -137,6 +140,7 @@ export function bindAppEvents(ctx) {
     const nextButton = byId("btn-mnext");
     if (nextButton) nextButton.disabled = true;
     if (!state.missionScores[mission.job_code]) state.missionScores[mission.job_code] = [];
+    onAnswerSubmitted(mission);
 
     // 체험 기록(attempt)이 만들어진 뒤에 채점해야 답변이 기록에 함께 저장된다.
     const pending = ensureAttempt()
@@ -200,12 +204,13 @@ export function refreshMissionNextButton(ctx) {
 }
 
 export function advanceMissionFlow(ctx) {
-  const { appNode, state, fetchResultSummary, render } = ctx;
+  const { appNode, state, fetchResultSummary, render, onResultShown = () => {} } = ctx;
 
   const showResult = async () => {
     await fetchResultSummary();
     state.screen = "result";
     render();
+    onResultShown();
   };
 
   if (state.pendingScores.length > 0) {

@@ -38,11 +38,23 @@ export function jobDefsForResult({ jobDefs, selectedJobs, selectedJobMeta }) {
   })));
 }
 
-// ── 채점 방식 안내 ────────────────────────────────────
-export function renderResultStatus({ state }) {
-  return state.evalMode === "fake"
-    ? `<div class="notice notice-warn">가짜 채점 모드(테스트·시연용)야. 점수는 실제 평가가 아니야.</div>`
-    : "";
+// ── 저장 상태 + 체험 후 질문(U22) ─────────────────────────
+export function renderResultStatus({ state, esc }) {
+  const notes = [];
+  if (state.viewingAttempt) {
+    notes.push(`<div class="notice">저장된 결과를 다시 보는 중이야 · ${esc(state.viewingAttempt.date || "")}${state.viewingAttempt.outdated ? " · <span style=\"color:var(--warn)\">체험 뒤에 미션 내용이 바뀌었어(이전 버전 미션)</span>" : ""} · <a href="/me.html">내 기록으로</a></div>`);
+  } else if (state.attemptSave === "account") {
+    notes.push(`<div class="notice notice-ok" id="save-status">이 결과는 내 기록에 저장됐어. <a href="/me.html">내 기록 보기</a></div>`);
+  } else if (state.attemptSave === "anonymous" && state.attemptId) {
+    const back = encodeURIComponent(`/index.html?attempt=${state.attemptId}#simulation`);
+    notes.push(`<div class="notice" id="save-status">로그인하면 이 결과를 내 기록에 저장할 수 있어(24시간 안에). <a href="/login.html?return=${back}">로그인하고 저장하기</a></div>`);
+  } else if (state.attemptSave === "failed") {
+    notes.push(`<div class="notice notice-warn" id="save-status">결과를 기록에 저장하지 못했어. 화면은 그대로 볼 수 있어.</div>`);
+  }
+  if (state.evalMode === "fake") {
+    notes.push(`<div class="notice notice-warn">가짜 채점 모드(테스트·시연용)야. 점수는 실제 평가가 아니야.</div>`);
+  }
+  return notes.join("");
 }
 
 const SCALE = [1, 2, 3, 4, 5];
@@ -54,6 +66,7 @@ function scaleInput(name, label, value, lowText, highText) {
 }
 
 export function renderPostSurvey({ state }) {
+  if (state.viewingAttempt) return "";
   const job = state.selectedJobs[0];
   const post = state.selfReports?.post?.[job];
   if (post?.submitted) return "";
@@ -188,6 +201,7 @@ export function renderRetrySection({ state, axes, axisLabels, esc }) {
       <table class="gap-tbl retry-tbl"><thead><tr><th>역량</th><th>1차</th><th>2차</th><th>변화</th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="axis-note">해설을 본 뒤 다시 쓴 답이라 점수가 오르는 게 자연스러워. 처음 결과(위)는 그대로 두고 비교만 보여줘.</p></div>`;
   }
+  if (state.viewingAttempt) return "";
   return `<div class="rs" id="retry-offer"><div class="rs-title">해설 보고 다시 도전</div>
     <p class="axis-note">이 미션의 기대 답안 방향과 채점 기준을 보여줄게. 같은 미션을 다시 내면 1차와 2차를 레이더로 겹쳐 비교해줘.</p>
     <button class="btn btn-p" type="button" id="btn-retry-open" data-mission-key="${esc(first.mission_key)}">해설 보기</button></div>`;

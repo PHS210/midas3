@@ -549,6 +549,7 @@ export function renderMissionScreen({
         ${submitHintUI}
         <textarea id="m-ans" maxlength="${ANSWER_MAX}" placeholder="여기에 답변을 작성하세요… (최대 ${ANSWER_MAX.toLocaleString("ko-KR")}자)">${esc(state.missionAnswer)}</textarea>
         <div class="char-ct">${answerCountText(state.missionAnswer.length)}</div>
+        <div class="draft-status" id="draft-status" aria-live="polite">${esc(state.draftStatus || "")}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <button class="btn btn-p" id="btn-mnext"${answerReady ? "" : " disabled"} style="width:100%">${isLastMission ? "결과 보기 →" : "다음 →"}</button>

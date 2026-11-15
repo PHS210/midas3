@@ -54,6 +54,16 @@ export function jobsRouter({ jobsCatalog, missionStore, postingsService }: JobsD
     return res.json({ axis: req.params.axis, jobs });
   });
 
+  router.get("/api/jobs/compare", (req, res) => {
+    const codes = String(req.query.codes ?? "").split(",").map((code) => code.trim()).filter(Boolean);
+    if (!codes.length || codes.length > 3 || !codes.every((code) => CodeSchema.safeParse(code).success)) {
+      return sendApiError(res, 400, "COMPARE_BAD_REQUEST", "codes는 직업코드 1~3개를 쉼표로 이어서 보내줘.");
+    }
+    const exp = experienceable();
+    const jobs = codes.map((code) => jobsCatalog.get(code)).filter(Boolean).map((job) => ({ ...job!, experienceable: exp.has(job!.code) }));
+    return res.json({ meta: jobsCatalog.meta, descriptions: jobsCatalog.descriptions, jobs });
+  });
+
   // 공고 요구역량(U25): 최근 공고 문장을 5개 역량으로 나눠 센 비중
   router.get("/api/jobs/:code/postings/requirements", (req, res) => {
     const parsed = CodeSchema.safeParse(req.params.code);

@@ -121,12 +121,17 @@ EVALUATE_RATE_LIMIT_MAX=30
 | `POSTINGS_MAX_PAGES` | 직업당 최대 페이지(페이지당 100건). 기본값 `10` |
 | `POSTINGS_REFRESH_HOURS` | 자동 갱신 주기(시간). 기본값 `24` |
 | `POSTINGS_DETAIL_LIMIT` | 공고 요구역량 분석을 위해 직업마다 상세 조회할 공고 수. 기본값 `10`, `0`이면 제목만 분석 |
-| `APP_ENV` | `production`이면 가짜 미션 생성 모드를 강제로 끈다 |
-| `PUBLIC_BASE_URL` | 서비스 주소(예: `https://jobsim.example.com`). 쿠키 Secure 판단과 요청 출처 검사에 쓴다. 기본값 `http://localhost:{PORT}` |
+| `APP_ENV` | `production`이면 개발용 로그인을 강제로 끈다 |
+| `PUBLIC_BASE_URL` | 서비스 주소(예: `https://jobsim.example.com`). 카카오 로그인 콜백·쿠키 Secure 판단에 쓴다. 기본값 `http://localhost:{PORT}` |
 | `TRUST_PROXY` | 리버스 프록시(Caddy 등) 뒤에서 돌릴 때 `true` |
 | `DATABASE_PATH` | SQLite 파일 위치. 기본값 `reports/jobsim.sqlite`, 테스트는 `:memory:` |
 | `EVAL_MODE` | `fake`이면 AI 호출 없이 가짜 채점(테스트·시연용). 기본값은 실제 채점 |
-| `ANONYMOUS_RESULT_RETENTION_HOURS` | 체험 기록(해설을 열 때 쓰는 브라우저 식별 쿠키) 보관 시간. 기본값 `24` |
+| `KAKAO_LOGIN_CLIENT_ID` / `KAKAO_LOGIN_CLIENT_SECRET` | 카카오 로그인(OpenID Connect) 앱의 REST API 키와 Client Secret |
+| `KAKAO_LOGIN_REDIRECT_URI` | 카카오 콘솔에 등록한 Redirect URI. 기본값 `{PUBLIC_BASE_URL}/auth/kakao/callback` |
+| `KAKAO_ADMIN_KEY` | 탈퇴할 때 카카오 연결 끊기(unlink)에 쓰는 어드민 키. 없으면 연결 끊기를 건너뛰고 안내만 한다 |
+| `AUTH_DEV_LOGIN` | `true`이면 카카오 없이 쓰는 개발용 로그인을 켠다(운영에서는 자동으로 꺼짐) |
+| `SESSION_IDLE_DAYS` / `SESSION_MAX_DAYS` | 로그인 유지 기간. 기본값 7일(활동 없을 때) / 30일(최대) |
+| `ANONYMOUS_RESULT_RETENTION_HOURS` | 로그인 전 체험 결과 보관 시간. 기본값 `24` |
 
 ## 설치와 실행
 
@@ -327,10 +332,11 @@ python scripts/export_missions.py --rebuild-index
 | 화면 | 주소 | 내용 |
 | --- | --- | --- |
 | 직무 탐색 | `/jobs.html` | KNOW 537개 직무, 이름·일상어 검색, 분야·체험 가능 필터, 최근 본 직무 |
-| 직무 상세 | `/job.html?code=K…` | 하는 일·역량·환경·임금·전망(출처·조사연도), 비슷한 직무, 채용공고 |
+| 직무 상세 | `/job.html?code=K…` | 하는 일·역량·환경·임금·전망(출처·조사연도), 비슷한 직무, 관심 저장·메모, 비교 담기 |
+| 직무 비교 | `/compare.html` | 최대 3개, 브라우저에 유지, 적합도 점수는 넣지 않음 |
+| 로그인 | `/login.html` | 카카오 로그인, 가입(약관·개인정보·만 14세 확인), 개발용 로그인 |
+| 내 기록 | `/me.html` | 완료한 체험 다시 보기·지우기, 쓰던 답안 이어 쓰기, 관심 직무, 닉네임·로그아웃·탈퇴 |
 | 약관 | `/terms.html`, `/privacy.html` | 초안. 배포 전에 연락처 자리(`[배포 전에 …]`)를 채워야 함 |
-
-직무 비교, 로그인(카카오), 내 기록(관심 직무·메모, 쓰던 답안 이어 쓰기, 결과 다시 보기)은 2026-11-15에 뺐습니다. 회원가입 없이 모든 기능을 씁니다.
 
 체험 화면(`/`)에는 업무 요청서 형식의 미션, 시작 전·후 흥미 질문, 결과 해석(수행 수준·직무 유사도·측정 범위), 근거 문장 강조, 해설 보고 재도전(1차·2차 레이더), 덜 잰 역량의 다음 미션, 공고 요구역량 비교, 강점 역량 직무, PNG 결과 카드·인쇄가 붙었습니다. 해설(기대 답안·채점 기준)은 `/api/bootstrap`에서 빠졌고, 미션을 제출한 뒤에만 `/api/missions/:key/explanation`으로 받을 수 있습니다.
 
@@ -338,11 +344,11 @@ python scripts/export_missions.py --rebuild-index
 
 ```bash
 npm run postings:fixture-snapshots
-# PowerShell: $env:EVAL_MODE="fake"; $env:POSTINGS_FIXTURE="1"; npm run dev
-# bash:       EVAL_MODE=fake POSTINGS_FIXTURE=1 npm run dev
+# PowerShell: $env:EVAL_MODE="fake"; $env:AUTH_DEV_LOGIN="true"; $env:POSTINGS_FIXTURE="1"; npm run dev
+# bash:       EVAL_MODE=fake AUTH_DEV_LOGIN=true POSTINGS_FIXTURE=1 npm run dev
 ```
 
-운영 도메인에서 HTTPS로 띄우는 방법은 `deploy/Caddyfile`과 `docker compose --profile https up -d`를 참고합니다.
+카카오 로그인을 켜려면 카카오 개발자 콘솔에서 앱을 만들고 카카오 로그인·OpenID Connect를 활성화한 뒤, 동의항목에 닉네임을 넣고 Redirect URI(`{PUBLIC_BASE_URL}/auth/kakao/callback`)를 등록합니다. 그다음 `.env`에 `KAKAO_LOGIN_CLIENT_ID`, `KAKAO_LOGIN_CLIENT_SECRET`, `KAKAO_ADMIN_KEY`, `PUBLIC_BASE_URL`을 넣습니다. 운영 도메인에서 HTTPS로 띄우는 방법은 `deploy/Caddyfile`과 `docker compose --profile https up -d`를 참고합니다.
 
 ### 채점 품질 측정(U18)
 
@@ -408,10 +414,10 @@ npm run check:frontend
 단위 테스트와 E2E 테스트가 필요한 경우 아래 명령을 실행합니다.
 
 ```bash
-npm run test:unit            # 채용공고·지역·채점기·서버(체험 기록·해설·직무 API)·탐색/요구역량/품질 지표·관리자 미션 생성(경로, 화면의 말) 단위 테스트
+npm run test:unit            # 채용공고·지역·채점기·서버(로그인·기록·직무 API)·탐색/요구역량/품질 지표·관리자 미션 생성(경로, 화면의 말) 단위 테스트
 npm run test:e2e             # 기존 smoke
 npm run test:e2e:postings    # 채용공고 섹션 E2E(고정 데이터, 8091 포트, 데스크톱·모바일)
-npm run test:e2e:features    # 탐색·상세·재도전·결과 카드 E2E(8092 포트, 가짜 채점)
+npm run test:e2e:features    # 탐색·상세·비교·로그인·내 기록·재도전·결과 카드 E2E(8092 포트, 가짜 채점·개발용 로그인)
 npm run test:e2e:admin       # 관리자 화면 E2E(8093 포트, 가짜 생성 모드, 복사한 미션 폴더 test-results/admin-missions)
 ```
 

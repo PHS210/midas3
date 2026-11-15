@@ -1,5 +1,6 @@
-import { esc, formatWon, renderFooter, renderHeader } from "./common/site.js";
+import { api, esc, formatWon, getSession, renderFooter, renderHeader, toast } from "./common/site.js";
 import { filterJobs, suggestWhenEmpty } from "./common/jobSearch.js";
+import { initCompareTray, isInCompare, readCompare, toggleCompare, COMPARE_MAX } from "./common/compareTray.js";
 import { clearRecent, readRecent } from "./common/recent.js";
 import { jobImage } from "./common/jobImages.js";
 
@@ -43,6 +44,25 @@ function writeState() {
   }
 }
 
+// 로그인했으면 관심 저장한 직무 코드 → 메모
+let interestMap = new Map();
+
+async function loadInterests() {
+  try {
+    const session = await getSession();
+    if (!session.authenticated) return;
+    const data = await api("GET", "/api/me/interests");
+    interestMap = new Map(data.interests.map((row) => [row.job_code, row.memo || ""]));
+  } catch (_) {
+    interestMap = new Map();
+  }
+}
+
+function compareButton(job) {
+  const inCompare = isInCompare(job.code);
+  return `<button class="btn btn-sm" type="button" data-compare="${esc(job.code)}" aria-pressed="${inCompare}">${inCompare ? "비교에서 빼기" : "비교 담기"}</button>`;
+}
+
 function card(job) {
   return `<article class="card job-card">
     <div class="top">
@@ -53,11 +73,14 @@ function card(job) {
       </div>
     </div>
     <div class="sum">${esc(job.summary)}</div>
+    ${interestMap.get(job.code) ? `<div class="memo-text" title="내 메모">메모: ${esc(interestMap.get(job.code))}</div>` : ""}
     <div class="foot">
       <div class="chips">
+        ${interestMap.has(job.code) ? `<span class="chip chip-interest">관심 저장됨</span>` : ""}
         ${job.experienceable ? `<span class="chip chip-ok">체험 가능</span>` : ""}
         ${job.salary_p50 ? `<span class="chip">중위 임금 ${formatWon(job.salary_p50)}</span>` : ""}
       </div>
+      ${compareButton(job)}
     </div>
   </article>`;
 }
@@ -94,8 +117,9 @@ function renderRecent() {
 }
 
 async function main() {
-  renderHeader("jobs");
+  renderHeader("jobs", { compareCount: readCompare().length });
   renderFooter();
+  initCompareTray();
   const state = readState();
   $("q").value = state.q;
   $("exp").checked = state.exp;
@@ -112,6 +136,7 @@ async function main() {
     $("results").innerHTML = `<div class="notice notice-err" style="grid-column:1/-1">직무 목록을 불러오지 못했어. 잠시 후 다시 시도해줘.</div>`;
     return;
   }
+  await loadInterests();
   render();
   if (state.scrollY) requestAnimationFrame(() => window.scrollTo(0, state.scrollY));
 
@@ -131,6 +156,14 @@ async function main() {
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+    const compare = target.closest("[data-compare]");
+    if (compare) {
+      const job = allJobs.find((j) => j.code === compare.dataset.compare);
+      const result = toggleCompare(job);
+      if (result === "full") toast(`비교는 ${COMPARE_MAX}개까지 담을 수 있어. 하나를 빼고 다시 담아줘.`);
+      render();
+      return;
+    }
     const action = target.closest("[data-action]")?.dataset.action;
     if (action === "clear-field") { $("field").value = ""; render(); }
     if (action === "clear-exp") { $("exp").checked = false; render(); }
@@ -138,6 +171,7 @@ async function main() {
     const example = target.closest("[data-example]");
     if (example) { $("q").value = example.dataset.example; shown = PAGE; render(); }
   });
+  window.addEventListener("jobsim:compare-changed", () => render());
 }
 
 main();

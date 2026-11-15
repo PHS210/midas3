@@ -823,19 +823,6 @@
 
 ---
 
-### 2026-11-15 — 직무 비교·로그인·내 기록 삭제
-왜:
-- 발표 전 범위 축소(팀 결정). 회원가입 없이 모든 기능을 쓰게 한다.
-
-주요 반영:
-- 삭제: `compare`/`login`/`me` 화면, `compareTray.js`, `routes/auth.ts`, `routes/me.ts`, `lib/auth/kakao.ts`·`terms.ts`, `/api/jobs/compare`
-- 함께 빠진 것: 관심 저장·메모, 답안 자동 저장(이어 쓰기), 결과 다시 보기, 로그인 전 결과 옮기기, CSRF·세션
-- 남긴 것: 익명 체험 기록(`jobsim_anon` 쿠키) — 제출한 미션의 해설 잠금 해제와 재도전에 쓴다. `POST /api/attempts`만 남김
-- 메뉴는 직무 탐색·체험 두 개. 개인정보처리방침·약관·README·AGENTS.md·.env 예시 정리
-- DB 테이블(users·sessions·interests·drafts)과 마이그레이션은 그대로 둠(쓰지 않음)
-
-검증: typecheck, check:frontend 30/30, unit 91/91, e2e 4, postings 6, admin 2, features 6 통과
-
 ## Open Items (Next)
 
 0000. 관리자 미션 생성 후속(2026-11-14)

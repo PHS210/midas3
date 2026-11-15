@@ -3,26 +3,31 @@ import { promises as fsp } from "node:fs";
 import path from "node:path";
 import {
   BootstrapResponseSchema,
+  CompleteAttemptRequestSchema,
   CreateAttemptRequestSchema,
   EvaluateRequestSchema,
   EvaluateResponseSchema,
   LogEntrySchema,
   RecommendationsRequestSchema,
-  RecommendationsResponseSchema
+  RecommendationsResponseSchema,
+  UpdateAttemptRequestSchema
 } from "../../lib/api/contracts.js";
 import type { Db } from "../../lib/db/database.js";
 import {
+  completeAttempt,
   createAttempt,
+  deleteAttempt,
   getAttempt,
   insertAttemptMission,
   isAttemptOwner,
-  listAttemptMissions
+  listAttemptMissions,
+  updateAttemptPreAnswers
 } from "../../lib/db/repos.js";
 import { evaluateAnswer, getEvalMode } from "../../lib/evaluator/evaluateAnswer.js";
 import { buildResultSummary, type MissionScoresByJob, type buildJobWeightCatalog } from "../../lib/recommendation/engine.js";
 import type { ServerConfig } from "../config.js";
 import { asyncRoute, sendApiError } from "../http.js";
-import { ensureAnonId, ownerOf } from "../authContext.js";
+import { ensureAnonId, getAuth, ownerOf, requireCsrf } from "../authContext.js";
 import { rateLimit } from "../middleware.js";
 import { missionExplanation, missionHash, missionToEvaluateInput, type MissionStore } from "../missionStore.js";
 
@@ -188,16 +193,49 @@ export function missionsRouter({ config, db, missionStore, jobWeightCatalog }: M
   }));
 
   // ── 체험 기록(시도) ─────────────────────────────────────
-  // 브라우저 식별자에 묶어 임시로 둔다(제출한 미션의 해설을 열 때 본인 확인에 쓴다).
+  // 로그인하지 않았으면 브라우저 식별자에 묶어 임시로 두고, 로그인하면 내 기록으로 옮긴다.
   router.post("/api/attempts", (req, res) => {
     const parsed = CreateAttemptRequestSchema.safeParse(req.body ?? {});
     if (!parsed.success) return sendApiError(res, 400, "ATTEMPT_BAD_REQUEST", "job_codes가 올바르지 않아.", parsed.error.issues);
-    const anonId = ensureAnonId(res, config);
-    const attempt = createAttempt(db, { userId: null, anonId }, {
+    const auth = getAuth(res);
+    const anonId = auth.user ? null : ensureAnonId(res, config);
+    const attempt = createAttempt(db, { userId: auth.user?.id ?? null, anonId }, {
       jobCodes: parsed.data.job_codes,
       preAnswers: parsed.data.pre_answers
     });
-    return res.status(201).json({ attempt: { id: attempt.id, created_at: attempt.created_at } });
+    return res.status(201).json({ attempt: { id: attempt.id, saved_to_account: Boolean(auth.user), created_at: attempt.created_at } });
+  });
+
+  router.patch("/api/attempts/:id", (req, res) => {
+    const attempt = ownedAttempt(res, req.params.id);
+    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없어.");
+    const parsed = UpdateAttemptRequestSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return sendApiError(res, 400, "ATTEMPT_BAD_REQUEST", "pre_answers가 필요해.", parsed.error.issues);
+    updateAttemptPreAnswers(db, attempt.id, parsed.data.pre_answers);
+    return res.json({ ok: true });
+  });
+
+  router.post("/api/attempts/:id/complete", express.json({ limit: "2mb" }), (req, res) => {
+    const attempt = ownedAttempt(res, req.params.id);
+    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없어.");
+    const parsed = CompleteAttemptRequestSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return sendApiError(res, 400, "ATTEMPT_SNAPSHOT_INVALID", "결과 스냅샷 형식이 올바르지 않아.", parsed.error.issues);
+    completeAttempt(db, attempt.id, parsed.data.snapshot);
+    return res.json({ ok: true, saved_to_account: Boolean(attempt.user_id) });
+  });
+
+  router.get("/api/attempts/:id", (req, res) => {
+    const attempt = ownedAttempt(res, req.params.id);
+    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없어.");
+    const missions = listAttemptMissions(db, attempt.id).map((row) => {
+      const current = missionStore.findByKey(row.mission_key);
+      return {
+        ...row,
+        mission_outdated: !current || missionHash(current) !== row.mission_hash
+      };
+    });
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ attempt, missions });
   });
 
   // 해설(U21): 이 체험 기록에서 해당 미션을 제출한 사람에게만 기대 답안과 채점 기준을 보여준다.
@@ -211,6 +249,13 @@ export function missionsRouter({ config, db, missionStore, jobWeightCatalog }: M
     if (!submitted) return sendApiError(res, 403, "EXPLANATION_LOCKED", "해설은 이 미션을 제출한 뒤에 볼 수 있어.");
     res.setHeader("Cache-Control", "no-store");
     return res.json(missionExplanation(mission));
+  });
+
+  router.delete("/api/attempts/:id", requireCsrf, (req, res) => {
+    const attempt = ownedAttempt(res, req.params.id);
+    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없어.");
+    deleteAttempt(db, attempt.id);
+    return res.json({ ok: true });
   });
 
   return router;

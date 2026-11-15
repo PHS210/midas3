@@ -16,9 +16,9 @@
 
 ## 3. 보안·개인정보
 - 인증키·비밀번호·토큰을 코드, 로그, 커밋, 테스트 고정 데이터, 브라우저 응답에 넣지 않는다. 로그에는 `maskSecrets`를 쓴다.
-- 로그인 기능은 없다(2026-11-15 삭제). 관리자 API는 `requireAdmin`을 붙인다.
+- 로그인이 필요한 상태 변경 API는 `requireUser` + `requireCsrf`를 붙인다. 관리자 API는 `requireAdmin`을 붙인다.
 - 답변 원문은 본인만 볼 수 있다. 공유·결과 카드에는 넣지 않는다.
-- 개인정보 수집 항목이나 보관 기간을 바꾸면 `app/privacy.html`을 함께 고친다.
+- 개인정보 수집 항목이나 보관 기간을 바꾸면 `app/privacy.html`과 `src/lib/auth/terms.ts`의 버전을 함께 고친다.
 
 ## 4. 검증 (커밋 전에 모두 통과)
 ```bash
@@ -27,10 +27,10 @@ npm run check:frontend
 npm run test:unit
 npm run test:e2e            # 기존 smoke
 npm run test:e2e:postings   # 채용공고 지도
-npm run test:e2e:features   # 탐색·상세·재도전·결과 카드
+npm run test:e2e:features   # 탐색·로그인·기록·재도전
 npm run test:e2e:admin      # 관리자 미션 생성 화면
 ```
-- 외부 API 없이 돌리려면 `EVAL_MODE=fake`(가짜 채점), `POSTINGS_FIXTURE=1`(가짜 공고), `ADMIN_GENERATION_MODE=fake`(가짜 생성)를 쓴다. 셋 다 운영(APP_ENV=production)에서는 쓰지 않는다.
+- 외부 API 없이 돌리려면 `EVAL_MODE=fake`(가짜 채점), `POSTINGS_FIXTURE=1`(가짜 공고), `AUTH_DEV_LOGIN=true`(개발용 로그인), `ADMIN_GENERATION_MODE=fake`(가짜 생성)를 쓴다. 넷 다 운영(APP_ENV=production)에서는 쓰지 않는다.
 - 같은 검사가 GitHub Actions(`.github/workflows/ci.yml`)에서도 돈다.
 
 ## 5. 커밋·문서

@@ -34,6 +34,11 @@ export function healthRouter(config: ServerConfig, db: Db, postingsService: Post
       admin_lock_enabled: Boolean(config.admin.password),
       admin_demo_unlock_enabled: config.admin.demoUnlock,
       database: { ok: dbOk, schema_version: schemaVersion },
+      auth: {
+        kakao_configured: Boolean(config.auth.kakaoClientId),
+        kakao_unlink_configured: Boolean(config.auth.kakaoAdminKey),
+        dev_login: config.auth.devLogin
+      },
       postings: postingsService.getHealth()
     });
   });

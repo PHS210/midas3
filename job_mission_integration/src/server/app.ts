@@ -13,8 +13,10 @@ import { apiErrorHandler, apiNotFound, sameOriginGuard } from "./http.js";
 import { loadAuth } from "./authContext.js";
 import type { MissionStore } from "./missionStore.js";
 import { adminGenerationRouter } from "./routes/adminGeneration.js";
+import { authRouter } from "./routes/auth.js";
 import { healthRouter } from "./routes/health.js";
 import { jobsRouter } from "./routes/jobs.js";
+import { meRouter } from "./routes/me.js";
 import { missionsRouter } from "./routes/missions.js";
 import { postingsRouter } from "./routes/postings.js";
 
@@ -46,7 +48,7 @@ export function createApp(ctx: AppContext) {
   });
   app.use(express.json({ limit: "1mb" }));
   app.use(sameOriginGuard(() => [config.publicBaseUrl]));
-  app.use(loadAuth());
+  app.use(loadAuth(ctx.db, config));
 
   app.use(express.static(config.paths.app));
   // 미션 JSON(기대 답안 포함)은 정적으로 내보내지 않는다. 화면은 /api/bootstrap(해설 제외)을 쓰고,
@@ -56,6 +58,8 @@ export function createApp(ctx: AppContext) {
   app.use("/vendor/leaflet.markercluster", express.static(path.join(config.paths.root, "node_modules/leaflet.markercluster/dist")));
 
   app.use(healthRouter(config, ctx.db, ctx.postingsService));
+  app.use(authRouter({ db: ctx.db, config, fetchImpl: ctx.fetchImpl }));
+  app.use(meRouter({ db: ctx.db, config, missionStore: ctx.missionStore, jobsCatalog: ctx.jobsCatalog }));
   app.use(jobsRouter({ jobsCatalog: ctx.jobsCatalog, missionStore: ctx.missionStore, jobWeightCatalog: ctx.jobWeightCatalog, postingsService: ctx.postingsService }));
   app.use(postingsRouter(config, ctx.postingsConfig, ctx.postingsService));
   app.use(missionsRouter({ config, db: ctx.db, missionStore: ctx.missionStore, jobWeightCatalog: ctx.jobWeightCatalog }));

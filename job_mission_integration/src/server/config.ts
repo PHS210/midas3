@@ -49,7 +49,13 @@ export interface ServerConfig {
   evaluateRateLimit: { windowMs: number; max: number };
   evaluationLogRetentionDays: number;
   auth: {
-    // 체험 기록(해설을 열 때 쓰는 브라우저 식별 쿠키) 보관 시간
+    devLogin: boolean;
+    kakaoClientId: string;
+    kakaoClientSecret: string;
+    kakaoAdminKey: string;
+    kakaoRedirectUri: string;
+    sessionIdleDays: number;
+    sessionMaxDays: number;
     anonymousRetentionHours: number;
   };
 }
@@ -107,6 +113,14 @@ export function loadServerConfig(env: NodeJS.ProcessEnv = process.env): ServerCo
     },
     evaluationLogRetentionDays: positiveIntFromEnv(env.EVALUATION_LOG_RETENTION_DAYS, 14),
     auth: {
+      // 개발·테스트용 로그인은 운영(APP_ENV=production)에서는 설정과 상관없이 꺼진다.
+      devLogin: envFlag(env.AUTH_DEV_LOGIN) && appEnv !== "production",
+      kakaoClientId: (env.KAKAO_LOGIN_CLIENT_ID ?? "").trim(),
+      kakaoClientSecret: (env.KAKAO_LOGIN_CLIENT_SECRET ?? "").trim(),
+      kakaoAdminKey: (env.KAKAO_ADMIN_KEY ?? "").trim(),
+      kakaoRedirectUri: (env.KAKAO_LOGIN_REDIRECT_URI ?? `${publicBaseUrl}/auth/kakao/callback`).trim(),
+      sessionIdleDays: positiveIntFromEnv(env.SESSION_IDLE_DAYS, 7),
+      sessionMaxDays: positiveIntFromEnv(env.SESSION_MAX_DAYS, 30),
       anonymousRetentionHours: positiveIntFromEnv(env.ANONYMOUS_RESULT_RETENTION_HOURS, 24)
     }
   };
