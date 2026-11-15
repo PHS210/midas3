@@ -6,26 +6,11 @@ function getApiToken() {
   }
 }
 
-let csrfToken = null;
-
-// 로그인한 상태면 상태 변경 요청에 CSRF 토큰을 붙인다.
-export async function getAuthSession() {
-  try {
-    const response = await fetch("/api/auth/session", { credentials: "same-origin" });
-    const data = response.ok ? await response.json() : { authenticated: false };
-    csrfToken = data.csrf_token || null;
-    return data;
-  } catch (_) {
-    return { authenticated: false };
-  }
-}
-
 function buildHeaders() {
   const token = getApiToken().trim();
   return {
     "Content-Type": "application/json",
-    ...(token ? { "x-api-token": token } : {}),
-    ...(csrfToken ? { "x-csrf-token": csrfToken } : {})
+    ...(token ? { "x-api-token": token } : {})
   };
 }
 
@@ -137,27 +122,6 @@ export async function getJobPostings(jobCode) {
 // ── 체험 기록 ─────────────────────────────
 export function createAttemptRequest({ jobCodes, preAnswers }) {
   return sendJson("POST", "/api/attempts", { job_codes: jobCodes, pre_answers: preAnswers || {} });
-}
-
-export function completeAttemptRequest(attemptId, snapshot) {
-  return sendJson("POST", `/api/attempts/${encodeURIComponent(attemptId)}/complete`, { snapshot });
-}
-
-export function getAttemptRequest(attemptId) {
-  return sendJson("GET", `/api/attempts/${encodeURIComponent(attemptId)}`);
-}
-
-// ── 쓰던 답안(로그인한 경우) ──────────────────
-export function saveDraftRequest(missionKey, answer) {
-  return sendJson("PUT", `/api/me/drafts/${encodeURIComponent(missionKey)}`, { answer });
-}
-
-export function getDraftRequest(missionKey) {
-  return sendJson("GET", `/api/me/drafts/${encodeURIComponent(missionKey)}`);
-}
-
-export function deleteDraftRequest(missionKey) {
-  return sendJson("DELETE", `/api/me/drafts/${encodeURIComponent(missionKey)}`);
 }
 
 // ── 결과 화면 확장 ────────────────────────────

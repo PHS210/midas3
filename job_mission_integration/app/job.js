@@ -1,5 +1,4 @@
-import { api, esc, formatWon, getSession, loginUrl, qs, renderFooter, renderHeader, toast } from "./common/site.js";
-import { initCompareTray, isInCompare, readCompare, toggleCompare, COMPARE_MAX } from "./common/compareTray.js";
+import { esc, formatWon, qs, renderFooter, renderHeader } from "./common/site.js";
 import { pushRecent } from "./common/recent.js";
 import { jobImage } from "./common/jobImages.js";
 import { mountPostingsSection, renderPostingsSectionShell } from "./components/postingsSection.js";
@@ -20,7 +19,6 @@ let job = null;
 let descriptions = {};
 let traitTab = "abilities";
 let traitOrder = "within";
-let interest = null;
 
 function scoreRows(key, limit) {
   const rows = (job[key] || []).slice();
@@ -85,25 +83,6 @@ function unavailableHtml() {
   </div>`;
 }
 
-async function renderInterest() {
-  const host = $("interest");
-  const session = await getSession();
-  if (!session.authenticated) {
-    host.innerHTML = `<a class="btn" href="${esc(loginUrl())}">로그인하고 관심 직무 저장</a>`;
-    return;
-  }
-  host.innerHTML = interest
-    ? `<button class="btn" type="button" data-action="unsave" aria-pressed="true">관심 직무에서 빼기</button>
-       <div class="memo-row"><label class="sr-only" for="memo">관심 메모</label><textarea class="input memo-input" id="memo" rows="2" maxlength="100" placeholder="왜 관심이 생겼는지 메모 (100자)">${esc(interest.memo || "")}</textarea><button class="btn" type="button" data-action="memo">메모 저장</button></div>`
-    : `<button class="btn" type="button" data-action="save" aria-pressed="false">관심 직무 저장</button>`;
-}
-
-function renderCompareButton() {
-  const inCompare = isInCompare(job.code);
-  $("compare-btn").textContent = inCompare ? "비교에서 빼기" : "비교 담기";
-  $("compare-btn").setAttribute("aria-pressed", String(inCompare));
-}
-
 function render(meta) {
   document.title = `${job.name} — JOBSIM`;
   main.innerHTML = `
@@ -117,8 +96,6 @@ function render(meta) {
     </div>
     <div class="actions">
       ${job.experienceable ? `<a class="btn btn-p" href="/index.html?job=${esc(job.code)}#simulation">이 직무 체험하기</a>` : ""}
-      <button class="btn" type="button" id="compare-btn"></button>
-      <span id="interest"></span>
     </div>
     ${job.experienceable ? "" : unavailableHtml()}
 
@@ -153,8 +130,6 @@ function render(meta) {
     <p class="source">출처: ${esc(meta.source)} · 임금 ${job.salary.year ?? "-"}년 · 전망 ${job.prospect.year ?? "-"}년 조사 · 역량·환경은 KNOW 재직자 조사 기준.
       ${job.keco ? `고용직업분류 ${esc(job.keco.code)} ${esc(job.keco.name)}.` : ""} 직업코드 ${esc(job.code)}</p>`;
   renderTraits();
-  renderCompareButton();
-  renderInterest();
 
   // 관련 채용 공고(U23): 공고 연결이 있는 직무만 보여준다.
   if (job.postings_status && job.postings_status !== "unmapped") {
@@ -163,54 +138,18 @@ function render(meta) {
   }
 }
 
-async function loadInterest() {
-  const session = await getSession();
-  if (!session.authenticated) return;
-  try {
-    const data = await api("GET", "/api/me/interests");
-    interest = data.interests.find((row) => row.job_code === job.code) || null;
-  } catch (_) {
-    interest = null;
-  }
-}
-
 async function onClick(event) {
   const target = event.target instanceof Element ? event.target : null;
   if (!target) return;
-  if (target.closest("#compare-btn")) {
-    const result = toggleCompare(job);
-    if (result === "full") toast(`비교는 ${COMPARE_MAX}개까지 담을 수 있어. 하나를 빼고 다시 담아줘.`);
-    renderCompareButton();
-    return;
-  }
   const tab = target.closest("[data-tab]");
   if (tab) { traitTab = tab.dataset.tab; renderTraits(); return; }
   const order = target.closest("[data-order]");
   if (order) { traitOrder = order.dataset.order; renderTraits(); return; }
-  const action = target.closest("[data-action]")?.dataset.action;
-  try {
-    if (action === "save") {
-      interest = (await api("PUT", `/api/me/interests/${job.code}`, {})).interest;
-      toast("관심 직무에 저장했어.");
-      renderInterest();
-    } else if (action === "unsave") {
-      await api("DELETE", `/api/me/interests/${job.code}`);
-      interest = null;
-      toast("관심 직무에서 뺐어.");
-      renderInterest();
-    } else if (action === "memo") {
-      interest = (await api("PUT", `/api/me/interests/${job.code}`, { memo: $("memo").value })).interest;
-      toast("메모를 저장했어.");
-    }
-  } catch (error) {
-    toast(error.message || "저장하지 못했어.");
-  }
 }
 
 async function start() {
-  renderHeader("jobs", { compareCount: readCompare().length });
+  renderHeader("jobs");
   renderFooter();
-  initCompareTray();
   const code = qs("code") || "";
   if (!/^K\d{9}$/.test(code)) {
     main.innerHTML = `<div class="empty">직무를 찾을 수 없어. <div class="btn-row"><a class="btn" href="/jobs.html">직무 탐색으로</a></div></div>`;
@@ -227,14 +166,12 @@ async function start() {
     job = data.job;
     descriptions = data.descriptions || {};
     pushRecent(job);
-    await loadInterest();
     render(data.meta);
   } catch (error) {
     main.innerHTML = `<div class="notice notice-err">직무 정보를 불러오지 못했어. 잠시 후 다시 시도해줘.</div>`;
     return;
   }
   main.addEventListener("click", onClick);
-  window.addEventListener("jobsim:compare-changed", renderCompareButton);
 }
 
 start();

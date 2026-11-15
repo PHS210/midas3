@@ -23,7 +23,7 @@ export async function startTestServer(
   } = {}
 ) {
   process.env.EVAL_MODE = "fake";
-  const env = { ...process.env, DATABASE_PATH: ":memory:", AUTH_DEV_LOGIN: "true", APP_ENV: "test", ...options.env } as NodeJS.ProcessEnv;
+  const env = { ...process.env, DATABASE_PATH: ":memory:", APP_ENV: "test", ...options.env } as NodeJS.ProcessEnv;
   const config = loadServerConfig(env);
   options.configure?.(config);
   const db = openDatabase(":memory:");
@@ -54,7 +54,6 @@ export async function startTestServer(
 // 쿠키를 기억하는 아주 작은 클라이언트
 export class Client {
   cookies = new Map<string, string>();
-  csrf: string | null = null;
   constructor(readonly base: string) {}
 
   private absorb(response: Response) {
@@ -76,7 +75,6 @@ export class Client {
       headers: {
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(this.cookies.size ? { Cookie: [...this.cookies].map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("; ") } : {}),
-        ...(this.csrf ? { "x-csrf-token": this.csrf } : {}),
         ...headers
       },
       body: body !== undefined ? JSON.stringify(body) : undefined
@@ -97,19 +95,4 @@ export class Client {
   put(url: string, body?: unknown) { return this.request("PUT", url, body ?? {}); }
   patch(url: string, body?: unknown) { return this.request("PATCH", url, body ?? {}); }
   del(url: string, body?: unknown) { return this.request("DELETE", url, body); }
-
-  async refreshCsrf() {
-    const session = await this.get("/api/auth/session");
-    this.csrf = session.json?.csrf_token ?? null;
-    return session.json;
-  }
-
-  // 개발용 로그인 → (처음이면) 약관 동의 가입까지
-  async devSignup(id: string, nickname = id) {
-    const login = await this.post("/api/auth/dev-login", { id, nickname });
-    if (login.json?.status === "signup_required") {
-      await this.post("/api/auth/signup", { nickname, agreeTerms: true, agreePrivacy: true, confirmAge14: true });
-    }
-    return this.refreshCsrf();
-  }
 }

@@ -25,19 +25,6 @@ function trackErrors(page: Page) {
   return errors;
 }
 
-async function devSignup(page: Page, id: string, nickname: string, returnTo = "/me.html") {
-  await page.goto(`/login.html?return=${encodeURIComponent(returnTo)}`);
-  await page.locator("#dev-id").fill(id);
-  await page.locator("#dev-form button[type=submit]").click();
-  await page.waitForURL(/step=signup/);
-  await page.locator("#nickname").fill(nickname);
-  await page.locator("#agree-terms").check();
-  await page.locator("#agree-privacy").check();
-  await page.locator("#confirm-age").check();
-  await page.locator("#signup-form button[type=submit]").click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login.html"));
-}
-
 async function playToResult(page: Page, { fromJobLink = false } = {}) {
   if (!fromJobLink) {
     await page.goto("/");
@@ -112,25 +99,11 @@ test("직무 상세: 하는 일·역량·환경·임금·전망·출처, 비슷�
   await expect(page.getByRole("link", { name: "이 직무 체험하기" })).toHaveCount(0);
 });
 
-test("비교: 최대 3개, 브라우저에 유지, 적합도 점수 없음", async ({ page }) => {
-  await page.goto("/jobs.html?q=%EB%B6%84%EC%84%9D");
-  const buttons = page.locator("[data-compare]");
-  await buttons.nth(0).click();
-  await buttons.nth(1).click();
-  await page.goto("/compare.html");
-  await expect(page.locator("table.compare thead th")).toHaveCount(3);
-  await expect(page.locator("table.compare")).not.toContainText("적합도");
-  await page.reload();
-  await expect(page.locator("table.compare thead th")).toHaveCount(3);
-  await page.locator("[data-remove]").first().click();
-  await expect(page.locator("table.compare thead th")).toHaveCount(2);
-});
-
-test("로그인 전 체험 → 결과 확장(해석·근거·흥미 변화·재도전·다음 미션·요구역량·강점·카드) → 로그인하면 내 기록으로", async ({ page }) => {
+test("체험 → 결과 확장(해석·근거·흥미 변화·재도전·다음 미션·요구역량·강점·카드), 로그인·저장 안내 없음", async ({ page }) => {
   const errors = trackErrors(page);
   await playToResult(page);
 
-  await expect(page.locator("#save-status")).toContainText("로그인하면 이 결과를 내 기록에 저장");
+  await expect(page.locator("#save-status")).toHaveCount(0);
   await expect(page.getByText("가짜 채점 모드")).toBeVisible();
 
   // U17 결과 해석
@@ -177,76 +150,24 @@ test("로그인 전 체험 → 결과 확장(해석·근거·흥미 변화·재�
   await expect(page.locator("#retry-result")).toContainText("재도전 점수 변화");
   await expect(page.locator("#retry-result svg#retry-radar")).toBeVisible();
 
-  // 로그인하고 저장하기 → 개발용 로그인·가입 → 결과 다시 보기
-  const saveLink = page.locator("#save-status a");
-  const href = await saveLink.getAttribute("href");
-  expect(href).toContain("/login.html?return=");
-  await page.goto(href!);
-  await page.locator("#dev-id").fill("anon-claim");
-  await page.locator("#dev-form button[type=submit]").click();
-  await page.waitForURL(/step=signup/);
-  await page.locator("#nickname").fill("옮김테스트");
-  await page.locator("#agree-terms").check();
-  await page.locator("#agree-privacy").check();
-  await page.locator("#confirm-age").check();
-  await page.locator("#signup-form button[type=submit]").click();
-  await expect(page.locator("#result-status")).toContainText("저장된 결과를 다시 보는 중", { timeout: 20_000 });
-  await expect(page.locator("#retry-result")).toContainText("재도전 점수 변화");
-  await expect(page.locator("#interest-change")).toContainText("+2");
-
-  await page.goto("/me.html");
-  await expect(page.locator(".card.record").first()).toContainText("결과 다시 보기");
   expect(errors).toEqual([]);
 });
 
-test("로그인 후 체험: 관심 저장·메모, 답안 자동 저장과 이어 쓰기, 내 기록, 기록 지우기, 탈퇴", async ({ page }) => {
-  await devSignup(page, "member1", "체험회원");
-
-  // U06 관심 저장 + 메모
-  await page.goto(`/job.html?code=${JOB}`);
-  await page.locator('#interest [data-action="save"]').click();
-  await page.locator("#memo").fill("데이터로 문제 푸는 게 재밌어 보여");
-  await page.locator('#interest [data-action="memo"]').click();
-  await page.goto("/me.html");
-  await expect(page.locator(".card.interest")).toContainText("데이터분석가");
-
-  // U02-2 쓰던 답안 이어 하기
-  await page.goto(`/index.html?job=${JOB}`);
-  await page.locator("#btn-pnext").click();
-  await page.locator(".mc").first().click();
-  await page.locator("#btn-ml-start").click();
-  await page.locator("#m-ans").fill("쓰다가 멈춘 답안이야. 나중에 이어서 쓸게.");
-  await expect(page.locator("#draft-status")).toContainText("자동 저장됨", { timeout: 10_000 });
-  await page.goto("/me.html");
-  await page.getByRole("link", { name: "이어 쓰기" }).click();
-  await expect(page.locator("#m-ans")).toHaveValue("쓰다가 멈춘 답안이야. 나중에 이어서 쓸게.", { timeout: 10_000 });
-
-  // 제출 → 내 기록에 저장
-  await page.locator("#m-ans").fill(ANSWER);
-  await page.locator("#btn-mnext").click();
-  await expect(page.locator("#save-status")).toContainText("내 기록에 저장됐어", { timeout: 30_000 });
-
-  await page.goto("/me.html");
-  await expect(page.getByRole("heading", { name: "쓰던 답안 이어 하기" })).toHaveCount(0);
-  const record = page.locator(".card.record").first();
-  await expect(record).toContainText("데이터분석가");
-  await record.getByRole("link", { name: "결과 다시 보기" }).click();
-  await expect(page.locator("#result-status")).toContainText("저장된 결과를 다시 보는 중");
-  await expect(page.locator("#interpretation")).toBeVisible();
-
-  // U01-11 기록 개별 삭제
-  await page.goto("/me.html");
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.locator("[data-del-attempt]").first().click();
-  await expect(page.locator("[data-del-attempt]")).toHaveCount(0);
-
-  // 탈퇴
-  await page.locator("#withdraw-confirm").fill("탈퇴");
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.locator("#withdraw-form button[type=submit]").click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/me.html") || url.search.includes("withdrawn"));
-  const session = await page.request.get("/api/auth/session");
-  expect((await session.json()).authenticated).toBe(false);
+test("비교·로그인·내 기록 화면과 메뉴가 없다", async ({ page, request }) => {
+  for (const path of ["/compare.html", "/login.html", "/me.html"]) {
+    expect((await request.get(path)).status(), path).toBe(404);
+  }
+  await page.goto("/");
+  await expect(page.locator("nav")).not.toContainText("비교");
+  await expect(page.locator("nav")).not.toContainText("내 기록");
+  await expect(page.locator("nav")).not.toContainText("로그인");
+  await page.goto("/jobs.html");
+  await expect(page.locator(".site-nav")).not.toContainText("내 기록");
+  await expect(page.locator("[data-compare]")).toHaveCount(0);
+  await page.goto("/job.html?code=K000001080");
+  await expect(page.locator("h1.page-h")).toBeVisible();
+  await expect(page.locator("#compare-btn")).toHaveCount(0);
+  await expect(page.getByText("관심 직무 저장")).toHaveCount(0);
 });
 
 test("해설은 제출 전에는 잠겨 있고, 부팅 카탈로그에도 기대 답안이 없다", async ({ page, request }) => {
@@ -305,86 +226,4 @@ test("재도전 표는 결과 화면처럼 미측정 축을 '미측정'으로, �
   await expect(table).toBeVisible({ timeout: 30_000 });
   await expect(table.locator("tr", { hasText: "대인서비스" })).toContainText("미측정");
   await expect(table.locator("tr", { hasText: "관찰·탐색" })).toContainText("미측정");
-});
-
-test("관심 직무: 비교할 직무를 고르고, 메모가 비교 담기 뒤에도 유지되고, 탐색·비교 화면에 관심·메모가 보인다", async ({ page }) => {
-  await devSignup(page, "member2", "메모회원");
-  for (const code of ["K000001080", "K000000872", "K000000997", "K000001179"]) {
-    await page.request.put(`/api/me/interests/${code}`, {
-      headers: { "x-csrf-token": (await (await page.request.get("/api/auth/session")).json()).csrf_token },
-      data: {}
-    });
-  }
-  await page.goto("/me.html");
-  const picks = page.locator("[data-pick]");
-  await expect(picks).toHaveCount(4);
-  await expect(page.locator("[data-pick]:checked")).toHaveCount(3);
-  // 4번째를 더 고르려 하면 막히고, 하나를 빼고 고르면 그 조합으로 비교한다(U01)
-  const last = picks.nth(3);
-  await last.check({ force: true }).catch(() => {});
-  await expect(page.locator("[data-pick]:checked")).toHaveCount(3);
-  await picks.nth(0).uncheck();
-  await last.check();
-  const pickedCodes = await page.locator("[data-pick]:checked").evaluateAll((els) => els.map((el) => (el as HTMLInputElement).dataset.pick).sort());
-  await page.locator("#compare-picked").click();
-  await page.waitForURL(/compare\.html/);
-  await expect(page.locator("table.compare thead th")).toHaveCount(4);
-  for (const code of pickedCodes) await expect(page.locator(`table.compare a[href="/job.html?code=${code}"]`)).toHaveCount(1);
-
-  // U04·U05: 메모는 여러 줄 입력칸, 저장 뒤 '비교 담기'를 눌러도 그대로
-  await page.goto("/me.html");
-  const memo = "데이터로 문제를 푸는 일이 재밌어 보여서 다음 학기에 관련 수업을 듣고 공모전도 나가보려고 함";
-  const memoBox = page.locator("textarea#memo-K000001080");
-  await expect(memoBox).toBeVisible();
-  await memoBox.fill(memo);
-  await page.locator('[data-memo="K000001080"]').click();
-  await expect(page.getByText("메모를 저장했어.")).toBeVisible();
-  await page.locator('.card.interest [data-compare="K000001080"]').click();
-  await expect(page.locator("textarea#memo-K000001080")).toHaveValue(memo);
-
-  // U02·U03: 탐색 목록과 비교표에서 관심 여부와 메모가 보인다
-  await page.goto("/jobs.html?q=%EB%8D%B0%EC%9D%B4%ED%84%B0%EB%B6%84%EC%84%9D%EA%B0%80");
-  const card = page.locator(".job-card", { hasText: "데이터분석가" }).first();
-  await expect(card.locator(".chip-interest")).toHaveText("관심 저장됨");
-  await expect(card.locator(".memo-text")).toContainText("공모전");
-  await page.goto("/compare.html?codes=K000001080,K000000822");
-  const memoRow = page.locator("table.compare tr", { hasText: "내 메모" });
-  await expect(memoRow).toContainText("공모전");
-  await expect(memoRow).toContainText("관심 저장 후 메모 가능");
-});
-
-// ── 미션 카탈로그 교체 뒤 회귀 테스트 ─────────────────────────
-test("미션이 빠진 직무로 저장된 결과도 다시 열린다", async ({ page }) => {
-  await stubExternal(page);
-  const errors = trackErrors(page);
-  // 데이터분석가 미션으로 결과를 내고, 저장된 결과(스냅샷)를 읽는다.
-  await page.goto(`/index.html?job=${JOB}`);
-  await page.locator("#btn-pnext").click();
-  await page.locator(".mc").first().click();
-  await page.locator("#btn-ml-start").click();
-  await page.locator("#m-ans").fill(ANSWER);
-  const completed = page.waitForResponse((res) => /\/api\/attempts\/[^/]+\/complete$/.test(new URL(res.url()).pathname) && res.ok());
-  await page.locator("#btn-mnext").click();
-  const attemptId = new URL((await completed).url()).pathname.split("/")[3];
-  await expect(page.locator("#btn-restart")).toBeVisible({ timeout: 30_000 });
-  const saved = await (await page.request.get(`/api/attempts/${attemptId}`)).json();
-
-  // 같은 결과를, 지금 카탈로그에 미션이 없는 직무(상품기획자)의 것으로 저장한다.
-  const GONE = "K000000997";
-  const boot = await (await page.request.get("/api/bootstrap")).json();
-  expect(boot.jobDefs.some((job: { job_code: string }) => job.job_code === GONE)).toBe(false);
-  const created = await page.request.post("/api/attempts", { data: { job_codes: [GONE] } });
-  const goneId = (await created.json()).attempt.id;
-  const snapshot = JSON.parse(JSON.stringify(saved.attempt.result_snapshot).split(JOB).join(GONE));
-  expect((await page.request.post(`/api/attempts/${goneId}/complete`, { data: { snapshot } })).status()).toBe(200);
-
-  await page.goto(`/index.html?attempt=${goneId}#simulation`);
-  await expect(page.locator("#btn-restart")).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator("#result-status")).toContainText("저장된 결과를 다시 보는 중");
-  await expect(page.locator(".compat-row")).toHaveCount(1);
-  // 빠진 직무가 직무 선택 화면에 다시 나오지는 않는다
-  await page.locator("#btn-restart").click();
-  await expect(page.locator(".jc").first()).toBeVisible();
-  await expect(page.locator(`.jc[data-jc="${GONE}"]`)).toHaveCount(0);
-  expect(errors).toEqual([]);
 });

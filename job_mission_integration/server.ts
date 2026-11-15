@@ -3,7 +3,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { openDatabase } from "./src/lib/db/database.js";
 import { deleteStaleAnonymousAttempts } from "./src/lib/db/repos.js";
-import { purgeExpiredAuthData } from "./src/lib/auth/session.js";
 import { loadJobsCatalog } from "./src/lib/jobs/catalog.js";
 import { loadPostingsConfig } from "./src/lib/postings/config.js";
 import { startPostingsScheduler } from "./src/lib/postings/scheduler.js";
@@ -34,7 +33,6 @@ const app = createApp({
 
 function purgeExpired() {
   try {
-    purgeExpiredAuthData(db, { idleDays: config.auth.sessionIdleDays, maxDays: config.auth.sessionMaxDays });
     const before = new Date(Date.now() - config.auth.anonymousRetentionHours * 60 * 60 * 1000).toISOString();
     deleteStaleAnonymousAttempts(db, before);
   } catch (error) {

@@ -56,23 +56,6 @@ export const CreateAttemptRequestSchema = z.object({
   pre_answers: z.record(z.unknown()).optional()
 });
 
-export const UpdateAttemptRequestSchema = z.object({
-  pre_answers: z.record(z.unknown())
-});
-
-// 결과 화면을 다시 그리는 데 필요한 상태(처음 본 결과 화면 그대로 다시 보기)
-export const CompleteAttemptRequestSchema = z.object({
-  snapshot: z.object({
-    selectedJobs: z.array(JobCodeSchema).min(1).max(3),
-    preqAnswers: z.record(z.unknown()).default({}),
-    missionScores: z.record(z.array(z.record(z.number()))).default({}),
-    evaluationLogs: z.array(z.record(z.unknown())).max(30).default([]),
-    resultSummary: z.record(z.unknown()).nullable().default(null),
-    selfReports: z.record(z.unknown()).default({}),
-    retry: z.record(z.unknown()).nullable().default(null)
-  }).passthrough()
-});
-
 export const MissionScoreRowSchema = AxisProfileSchema.partial();
 
 const RecommendationLogSchema = z.object({

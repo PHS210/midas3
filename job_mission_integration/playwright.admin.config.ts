@@ -34,7 +34,6 @@ export default defineConfig({
       POSTINGS_FIXTURE: "1",
       POSTINGS_DATA_DIR: "test-results/admin-postings",
       OPENAI_API_KEY: "",
-      KAKAO_LOGIN_CLIENT_ID: ""
     }
   },
   projects: [
