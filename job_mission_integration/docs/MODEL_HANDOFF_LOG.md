@@ -1102,6 +1102,19 @@
 
 검증: typecheck, check:frontend, unit 101/101, features E2E 10/10
 
+### 2026-11-16 — 내 기록: 체험한 직무·제출한 미션 수가 지운 뒤에도 남던 문제 수정
+왜:
+- 내 기록에서 체험 기록을 모두 지워도 "체험한 직무"가 1로 남았다
+- 두 숫자가 시작만 하고 끝내지 않은 체험까지 셌다. 그 체험은 목록에 나오지 않아 지울 버튼도 없다. 로그인 전에 시작만 한 체험도 로그인할 때 계정으로 옮겨져 같은 일이 생긴다
+
+바뀐 것:
+- `src/server/routes/me.ts`: `/api/me/summary`의 `counts.jobs_tried`를 끝낸 체험(`status = completed`)의 직무만 세도록 고침
+- `src/lib/db/repos.ts`: `countUserMissions`가 끝낸 체험의 미션만 세도록 고침
+- `tests/unit/server.test.ts`: 끝내지 않은 체험이 있어도 두 숫자가 끝낸 체험만 세고, 기록을 지우면 0이 되는 것을 확인
+
+검증:
+- typecheck 통과, check:frontend 32/32, test:unit 112/112, test:e2e:features 10/10
+
 ## Open Items (Next)
 
 0000. 관리자 미션 생성 후속(2026-11-14)
