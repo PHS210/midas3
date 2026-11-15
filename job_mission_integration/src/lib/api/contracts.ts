@@ -299,6 +299,12 @@ export const AdminGenerationStartRequestSchema = z.object({
   fast: z.boolean().default(false)
 }).strict();
 
+// 관리자 암호 바꾸기. 새 암호의 조건(4자 이상 등)은 AdminAuth가 본다.
+export const AdminPasswordChangeRequestSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: z.string().min(1).max(200)
+}).strict();
+
 export const AdminMaterialTypesQuerySchema = AdminGenerationStartRequestSchema.omit({ review: true, fast: true });
 
 export const AdminGenerationRunsQuerySchema = z.object({

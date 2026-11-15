@@ -322,6 +322,8 @@ button.link,a.link{white-space:nowrap}
 .dlg h2{font-size:15px;font-weight:600;margin:0}
 .dlg p{color:var(--tx2);margin:8px 0 0}
 .dlg .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+form.dlg .flbl{display:block;margin-top:14px}
+form.dlg .hint{margin-top:12px}
 
 /* 알림 */
 .adm-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:110;max-width:calc(100% - 32px);padding:9px 14px;border-radius:var(--rs);border:1px solid var(--line2);background:#1d2026;color:var(--tx);box-shadow:0 10px 30px rgba(0,0,0,.45)}

@@ -55,13 +55,17 @@ export function setAuthLostHandler(fn) {
   authLostHandler = typeof fn === "function" ? fn : null;
 }
 
-async function request(method, path, { body, token = getToken(), silent = false } = {}) {
+// 암호를 바꾸는 요청이 가는 동안에는 다른 요청의 401로 암호 화면에 보내지 않는다
+// (서버는 이미 새 암호인데 이 탭은 아직 예전 암호를 들고 있는 짧은 틈).
+let changingPassword = false;
+
+async function request(method, path, { body, token = getToken(), silent = false, base = BASE } = {}) {
   const headers = {};
   if (token) headers["x-api-token"] = token;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   let response;
   try {
-    response = await fetch(`${BASE}${path}`, {
+    response = await fetch(`${base}${path}`, {
       method,
       headers,
       credentials: "same-origin",
@@ -82,7 +86,7 @@ async function request(method, path, { body, token = getToken(), silent = false 
     const code = typeof error?.code === "string" && error.code ? error.code : `HTTP_${response.status}`;
     const failure = new AdminApiError(response.status, code, error?.message || `HTTP ${response.status}`, error?.details);
     // 늦게 온 401: 이 요청을 보낸 뒤 암호가 바뀌었으면(다시 넣었거나 로그아웃) 지금 암호를 건드리지 않는다
-    if (response.status === 401 && !silent && token === getToken()) {
+    if (response.status === 401 && !silent && !changingPassword && token === getToken()) {
       clearToken();
       if (authLostHandler) authLostHandler(failure);
     }
@@ -120,6 +124,27 @@ export const adminApi = {
   catalog: () => request("GET", "/catalog"),                                                // { jobs, total }
   removeFromCatalog: (missionKey) => request("DELETE", `/catalog/${encodeURIComponent(String(missionKey))}`)   // { ok, ... }
 };
+
+// 관리자 암호 바꾸기. 되면 이 탭이 들고 있는 암호를 새 암호로 바꾼다.
+export async function changePassword(currentPassword, newPassword) {
+  changingPassword = true;
+  let failure = null;
+  try {
+    await request("POST", "/password", { body: { currentPassword, newPassword }, base: "/api/admin" });
+    setToken(newPassword);
+  } catch (err) {
+    failure = err;
+  } finally {
+    changingPassword = false;
+  }
+  if (!failure) return;
+  // 이 탭이 들고 있던 암호가 더는 맞지 않는다(다른 곳에서 먼저 바꿨다). 암호 화면으로 보낸다
+  if (failure.status === 401) {
+    clearToken();
+    if (authLostHandler) authLostHandler(failure);
+  }
+  throw failure;
+}
 
 // 암호가 맞는지 본다. 결과는 { ok, status }(ok가 거짓이면 틀린 암호). 그 밖의 실패는 AdminApiError로 던진다.
 // - GET /status가 401이면 틀린 것이다.

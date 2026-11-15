@@ -36,6 +36,11 @@ export const BLOCKED_REASON_TEXT = {
 const ERROR_TEXT = {
   AUTH_REQUIRED: "관리자 암호가 필요합니다.",
   ADMIN_PASSWORD_NOT_SET: "서버에 관리자 암호가 설정돼 있지 않습니다.",
+  ADMIN_TOO_MANY_ATTEMPTS: "암호를 여러 번 틀렸습니다. 1분 뒤에 다시 해 주세요.",
+  ADMIN_PASSWORD_WRONG: "지금 암호가 올바르지 않습니다.",
+  ADMIN_PASSWORD_INVALID: "새 암호는 공백 없이 영문, 숫자, 기호로 4자 이상이어야 합니다.",
+  ADMIN_PASSWORD_SAME: "새 암호가 지금 암호와 같습니다.",
+  ADMIN_PASSWORD_RESET_ON: "서버에 암호 되돌리기 설정이 켜져 있어 바꿀 수 없습니다. 설정을 지우고 서버를 다시 켜 주세요.",
   GENERATION_ALREADY_RUNNING: "지금 만들고 있는 미션이 있습니다. 끝난 뒤에 다시 시작해 주세요.",
   GENERATION_STILL_RUNNING: "아직 만들고 있는 중이라 할 수 없습니다. 끝난 뒤에 다시 해 주세요.",
   GENERATION_DAILY_LIMIT: "오늘 만들 수 있는 건수를 모두 썼습니다.",

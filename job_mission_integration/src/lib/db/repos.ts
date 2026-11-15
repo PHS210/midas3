@@ -412,6 +412,21 @@ export function interruptRunningGenerationRuns(db: Db): number {
   );
 }
 
+// 관리자 설정(admin_settings). 값이 없으면 null.
+export function getAdminSetting(db: Db, key: string): string | null {
+  const row = db.prepare("SELECT value FROM admin_settings WHERE key = ?").get(key) as { value: string } | undefined;
+  return row ? String(row.value) : null;
+}
+
+export function setAdminSetting(db: Db, key: string, value: string): void {
+  db.prepare("INSERT INTO admin_settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")
+    .run(key, value, nowIso());
+}
+
+export function deleteAdminSetting(db: Db, key: string): boolean {
+  return Number(db.prepare("DELETE FROM admin_settings WHERE key = ?").run(key).changes) > 0;
+}
+
 // 하루 시작 건수. 생성 기록을 지워도 줄지 않도록 따로 센다.
 export function getGenerationStartCount(db: Db, day: string): number {
   const row = db.prepare("SELECT started FROM admin_generation_daily WHERE day = ?").get(day) as { started: number } | undefined;

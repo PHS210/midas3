@@ -9,9 +9,11 @@ import type { PostingsService } from "../lib/postings/service.js";
 import type { buildJobWeightCatalog } from "../lib/recommendation/engine.js";
 import type { JobsCatalog } from "../lib/jobs/catalog.js";
 import type { ServerConfig } from "./config.js";
+import { AdminAuth } from "./adminAuth.js";
 import { apiErrorHandler, apiNotFound, sameOriginGuard } from "./http.js";
 import { loadAuth } from "./authContext.js";
 import type { MissionStore } from "./missionStore.js";
+import { adminAccountRouter } from "./routes/adminAccount.js";
 import { adminGenerationRouter } from "./routes/adminGeneration.js";
 import { authRouter } from "./routes/auth.js";
 import { healthRouter } from "./routes/health.js";
@@ -57,11 +59,14 @@ export function createApp(ctx: AppContext) {
   app.use("/vendor/leaflet", express.static(path.join(config.paths.root, "node_modules/leaflet/dist")));
   app.use("/vendor/leaflet.markercluster", express.static(path.join(config.paths.root, "node_modules/leaflet.markercluster/dist")));
 
-  app.use(healthRouter(config, ctx.db, ctx.postingsService));
+  // 관리자 암호(처음 암호, 화면에서 바꾼 암호, 틀린 횟수 제한)를 한곳에서 본다.
+  const adminAuth = new AdminAuth({ db: ctx.db, config });
+  app.use(healthRouter(config, ctx.db, ctx.postingsService, adminAuth));
   app.use(authRouter({ db: ctx.db, config, fetchImpl: ctx.fetchImpl }));
   app.use(meRouter({ db: ctx.db, config, missionStore: ctx.missionStore, jobsCatalog: ctx.jobsCatalog }));
   app.use(jobsRouter({ jobsCatalog: ctx.jobsCatalog, missionStore: ctx.missionStore, jobWeightCatalog: ctx.jobWeightCatalog, postingsService: ctx.postingsService }));
-  app.use(postingsRouter(config, ctx.postingsConfig, ctx.postingsService));
+  app.use(postingsRouter(config, adminAuth, ctx.postingsConfig, ctx.postingsService));
+  app.use(adminAccountRouter({ config, auth: adminAuth }));
   app.use(missionsRouter({ config, db: ctx.db, missionStore: ctx.missionStore, jobWeightCatalog: ctx.jobWeightCatalog }));
   const ncs = new NcsCatalog(config.paths.ncsJobs, (code) => ctx.jobsCatalog.get(code)?.duties ?? null);
   const generationService = new AdminGenerationService({
@@ -71,7 +76,7 @@ export function createApp(ctx: AppContext) {
     ncs,
     commands: (ctx.generationCommands ?? createCommands)(config, ncs)
   });
-  app.use(adminGenerationRouter({ config, service: generationService, ncs, missionStore: ctx.missionStore }));
+  app.use(adminGenerationRouter({ config, auth: adminAuth, service: generationService, ncs, missionStore: ctx.missionStore }));
 
   app.use("/api", apiNotFound());
   app.use(apiErrorHandler());

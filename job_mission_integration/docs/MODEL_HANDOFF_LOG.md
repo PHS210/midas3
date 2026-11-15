@@ -1053,6 +1053,29 @@
 - check:frontend 32/32, test:e2e:admin 2/2
 - 가짜 생성 서버에서 암호 화면을 열어 링크가 버튼 아래 가운데에 보이고, 누르면 첫 화면으로 가는 것을 확인
 
+### 2026-11-15 — 관리자: 화면에서 암호 바꾸기
+왜:
+- 관리자 암호는 설정 파일의 `ADMIN_PASSWORD` 한 줄이라, 바꾸려면 서버에 접속해 파일을 고치고 서버를 다시 켜야 했다
+
+바뀐 것:
+- `src/server/adminAuth.ts`(새 파일): 관리자 암호를 한곳에서 본다. 처음 암호는 `ADMIN_PASSWORD`이고, 화면에서 바꾸면 DB에 scrypt 해시로 남아 그 암호만 통한다(설정 파일보다 먼저). 한 번 맞은 암호의 SHA-256을 메모리에 두어 요청마다 scrypt를 돌리지 않는다
+- 새 암호의 조건: 공백 없는 영문 · 숫자 · 기호(ASCII 0x21~0x7E) 4~100자, 지금 암호와 다를 것. 암호가 요청 머리(`x-api-token`)에 실려 가므로 브라우저가 머리에 실을 수 없는 글자(한글 등)는 받지 않는다
+- 틀린 암호 제한: IP마다 1분에 10번(`ADMIN_PASSWORD_MAX_ATTEMPTS`, 0이면 끔). 10번째부터 1분 동안 그 IP에서는 맞는 암호도 `429 ADMIN_TOO_MANY_ATTEMPTS`를 받는다(맞는 암호만 통과시키면 틀린 암호를 끝없이 넣어 볼 수 있다). 암호 바꾸기에서 지금 암호를 틀린 것도 한 번으로 센다. 바꾸기 바로 앞의 암호로 온 요청(다른 창, 다른 사람)은 거절하되 세지 않는다
+- 제한에 쓰는 IP는 `trustedClientIp`(`src/server/http.ts`, 새 함수)로 본다: `req.ip`만 쓰고 요청이 보낸 `X-Forwarded-For`를 직접 읽지 않는다(`TRUST_PROXY=true`일 때만 express가 반영한다). 직접 읽으면 값을 바꿔 가며 제한을 피하거나 남의 IP를 막을 수 있다. 틀린 횟수 표는 5,000개까지만 둔다
+- 저장된 해시의 모양이 다르면(소금 16바이트, 해시 64바이트의 16진수가 아니면) 어떤 암호도 받지 않는다
+- 되돌리기: `ADMIN_PASSWORD_RESET=true`로 서버를 켜면 화면에서 바꾼 암호를 지우고 처음 암호로 돌아간다. 켜져 있는 동안에는 화면에서 바꿀 수 없다(`409 ADMIN_PASSWORD_RESET_ON`)
+- 경로 `POST /api/admin/password`(`src/server/routes/adminAccount.ts`, 새 파일): 본문 `{ currentPassword, newPassword }`. 조회 전용 열기와 상관없이 암호가 필요하다. 오류: `ADMIN_PASSWORD_WRONG`(403), `ADMIN_PASSWORD_INVALID` · `ADMIN_PASSWORD_SAME` · `ADMIN_PASSWORD_BAD_REQUEST`(400)
+- 암호를 직접 견주던 곳을 모두 `AdminAuth`로 바꿈: `src/server/middleware.ts`의 `requireAdmin(config, auth, options)`, `src/server/routes/adminGeneration.ts`, `src/server/routes/postings.ts`, `src/server/routes/health.ts`. 연결은 `src/server/app.ts`
+- DB(`src/lib/db/database.ts` 마이그레이션 4, `src/lib/db/repos.ts`): 테이블 `admin_settings(key, value, updated_at)`와 읽기 · 쓰기 · 지우기 함수. `src/server/config.ts`에 `admin.passwordReset`
+- 화면(`app/admin/shell.js`, `app/admin/api.js`, `app/admin/labels.js`, `app/admin/admin.css`): 사이드바 아래 `암호 바꾸기`(조회 전용이면 없음)와 창(지금 암호, 새 암호, 새 암호 확인). 바꾸면 그 탭은 새 암호로 이어서 쓰고 "암호를 바꿨습니다."가 뜬다. 다른 창은 다음 요청에서 암호 화면으로 돌아간다
+- E2E 서버의 암호를 `pw-e2e`로 바꿈(`playwright.admin.config.ts`, `tests/e2e-admin/admin.spec.ts`): 암호 바꾸기 테스트가 끝에 처음 값으로 되돌리려면 4자 이상이어야 한다
+- 문서: `README.md`(설정 값, "관리자 암호 바꾸기", 문제 해결), `.env.example`, `.env.server.example`, `docs/AWS_EC2_DOCKER_DEPLOY.md`, `docs/OPERATIONS.md`
+
+검증:
+- typecheck 통과, check:frontend 32/32, test:unit 110/110, test:e2e:postings 6/6, test:e2e:features 9/9, test:e2e:admin 3/3, Python 테스트 387개 통과
+- `tests/unit/adminAuth.test.ts`(새 파일, 10개): 처음 암호로 들어감, 바꾼 뒤 새 암호만 통하고 서버를 다시 켜도 유지(DB에 암호 원문 없음), 두 번 바꾸면 처음 바꾼 암호도 막힘, 거절되는 경우, 깨진 해시는 아무 암호도 받지 않음, 되돌리기 설정, 10번 틀린 뒤 1분 동안 막힘과 풀림, 바로 앞 암호는 세지 않음, 제한 끄기, `X-Forwarded-For`를 바꿔 보내도 제한을 피하지 못함, 바꾼 뒤 예전 암호가 관리자 생성 · 채용공고 경로에서 401, 조회 전용 상태에서는 바꿀 수 없음
+- 가짜 생성 서버에서 창을 열어 확인: 4자 미만과 틀린 지금 암호의 안내 글, 바꾼 뒤 알림과 그 탭이 이어서 동작함, 예전 암호로 보낸 요청이 401
+
 ---
 
 ## Open Items (Next)

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 // 관리자 화면 E2E. 서버는 가짜 생성 · 메모리 DB · 복사한 미션 폴더로 뜬다(playwright.admin.config.ts).
-const PASSWORD = "pw";
+const PASSWORD = "pw-e2e";   // 4자 이상이어야 암호 바꾸기 테스트가 끝에 이 값으로 되돌릴 수 있다
 
 // 외부 요청(웹폰트)은 네트워크와 무관하게 빈 응답으로 막는다.
 async function stubExternal(page: Page) {
@@ -29,7 +29,7 @@ test("관리자: 고르기 → 생성 → 근거 → 카탈로그에 추가 → 
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
 
-  // 암호 "pw"로 들어간다 → 사이드바에 "새 미션 만들기"
+  // 암호로 들어간다 → 사이드바에 "새 미션 만들기"
   await page.goto("/admin.html");
   await signIn(page, PASSWORD);
   await expect(menu(page, "새 미션 만들기")).toBeVisible();
@@ -113,4 +113,55 @@ test("관리자: 암호가 틀리면 들어가지 못한다", async ({ page }) =
   // 암호 화면에서 사용자 화면으로 나갈 수 있다
   await page.getByRole("link", { name: "사용자 화면으로" }).click();
   await expect(page).toHaveURL(/\/index\.html$/);
+});
+
+test("관리자: 화면에서 암호를 바꾸면 예전 암호는 막히고 새 암호로 들어간다", async ({ page }) => {
+  const NEXT = "pw-next";
+  const side = page.locator("aside.side");
+  const dialog = page.getByRole("dialog", { name: "관리자 암호 바꾸기" });
+  const change = async (current: string, next: string, confirm = next) => {
+    await side.getByRole("button", { name: "암호 바꾸기" }).click();
+    await dialog.getByLabel("지금 암호").fill(current);
+    await dialog.getByLabel("새 암호", { exact: true }).fill(next);
+    await dialog.getByLabel("새 암호 확인").fill(confirm);
+    await dialog.getByRole("button", { name: "바꾸기" }).click();
+  };
+
+  await page.goto("/admin.html");
+  await signIn(page, PASSWORD);
+  await expect(side).toBeVisible();
+
+  // 새 암호 확인이 다르면 서버에 보내지 않고 알린다. 지금 암호가 틀리면 서버가 거절한다
+  await change(PASSWORD, NEXT, "different");
+  await expect(dialog.getByRole("alert")).toHaveText("새 암호와 새 암호 확인이 다릅니다.");
+  await dialog.getByRole("button", { name: "취소" }).click();
+  await expect(dialog).toHaveCount(0);
+  await change("not-the-password", NEXT);
+  await expect(dialog.getByRole("alert")).toHaveText("지금 암호가 올바르지 않습니다.");
+  await dialog.getByRole("button", { name: "취소" }).click();
+
+  // 바꾸면 창이 닫히고, 이 탭은 새 암호로 이어서 쓴다(다시 묻지 않는다)
+  await change(PASSWORD, NEXT);
+  await expect(dialog).toHaveCount(0);
+  await menu(page, "생성 기록").click();
+  await expect(page).toHaveURL(/#\/runs$/);
+  await expect(page.getByRole("heading", { name: "생성 기록" })).toBeVisible();
+
+  // 로그아웃 → 예전 암호는 거절, 새 암호는 통과
+  await side.getByRole("button", { name: "로그아웃" }).click();
+  await signIn(page, PASSWORD);
+  await expect(page.getByTestId("auth-error")).toHaveText("암호가 올바르지 않습니다.");
+  await signIn(page, NEXT);
+  await expect(side).toBeVisible();
+
+  // 같은 서버를 쓰는 다른 테스트를 위해 처음 암호로 되돌린다
+  await change(NEXT, PASSWORD);
+  await expect(dialog).toHaveCount(0);
+
+  // 되돌린 뒤에는 바로 앞 암호(NEXT)도 막힌다
+  await side.getByRole("button", { name: "로그아웃" }).click();
+  await signIn(page, NEXT);
+  await expect(page.getByTestId("auth-error")).toHaveText("암호가 올바르지 않습니다.");
+  await signIn(page, PASSWORD);
+  await expect(side).toBeVisible();
 });

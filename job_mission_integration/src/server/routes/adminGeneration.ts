@@ -6,7 +6,8 @@ import type { NcsCatalog } from "../../lib/adminGeneration/ncsCatalog.js";
 import type { AdminGenerationService, RunView } from "../../lib/adminGeneration/service.js";
 import { AdminGenerationRunsQuerySchema, AdminGenerationStartRequestSchema, AdminMaterialTypesQuerySchema } from "../../lib/api/contracts.js";
 import type { ServerConfig } from "../config.js";
-import { ApiError, asyncRoute, extractApiToken } from "../http.js";
+import type { AdminAuth } from "../adminAuth.js";
+import { ApiError, asyncRoute, extractApiToken, trustedClientIp } from "../http.js";
 import { requireAdmin } from "../middleware.js";
 import type { MissionStore } from "../missionStore.js";
 
@@ -45,20 +46,24 @@ function runIdOf(req: express.Request): string {
   return runId;
 }
 
-export function adminGenerationRouter(deps: { config: ServerConfig; service: AdminGenerationService; ncs: NcsCatalog; missionStore: MissionStore }) {
-  const { config, service, ncs, missionStore } = deps;
+export function adminGenerationRouter(deps: { config: ServerConfig; auth: AdminAuth; service: AdminGenerationService; ncs: NcsCatalog; missionStore: MissionStore }) {
+  const { config, auth, service, ncs, missionStore } = deps;
   const router = express.Router();
-  const guard = requireAdmin(config, { allowDemoRead: true });
+  const guard = requireAdmin(config, auth, { allowDemoRead: true });
 
   const catalogMissions = () => missionStore.get()?.allMissions ?? [];
   // 조회 전용 열기(암호 없이 읽기)로 온 요청인지. 암호가 맞으면 참이다.
-  const hasAdminToken = (req: express.Request) => Boolean(config.admin.password) && extractApiToken(req) === config.admin.password;
+  // 조회 전용 열기에서는 guard가 암호를 보지 않고 지나가므로 여기서 본다(틀리면 틀린 횟수에 센다).
+  const hasAdminToken = (req: express.Request) => {
+    const token = extractApiToken(req);
+    return Boolean(token) && auth.attempt(trustedClientIp(req), token) === "ok";
+  };
 
   router.get(`${BASE}/status`, guard, asyncRoute(async (_req, res) => {
     const status = await service.status();
     res.json({
       ...status,
-      adminLockEnabled: !config.admin.demoUnlock && Boolean(config.admin.password),
+      adminLockEnabled: !config.admin.demoUnlock && auth.hasPassword(),
       adminDemoUnlockEnabled: config.admin.demoUnlock
     });
   }));

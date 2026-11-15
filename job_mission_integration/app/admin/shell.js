@@ -2,7 +2,7 @@
    여러 화면이 같이 쓰는 그리기 도우미(icon, verdictBadge, statusBadge, formatWhen 등)도 여기에 둔다.
    화면에 넣는 값은 모두 esc()를 거친다. */
 import { esc } from "../common/site.js";
-import { adminApi } from "./api.js";
+import { adminApi, changePassword } from "./api.js";
 import { STATUS_LABELS, errorText, verdictView } from "./labels.js";
 
 /* ───── 아이콘 (시안의 SVG) ───── */
@@ -129,9 +129,11 @@ function rememberGloss(closed) {
 // ctx.logout(), ctx.askPassword()는 main.js가 넣어 준다.
 export function renderShell(root, ctx) {
   const closed = glossClosed();
+  // 조회 전용(암호를 넣지 않음)이면 암호 입력만, 아니면 암호 바꾸기와 로그아웃
   const bottomAction = ctx.readOnly
     ? `<button class="nav" type="button" data-shell="ask" title="암호 입력" aria-label="암호 입력">${icon("key")}<span>암호 입력</span></button>`
-    : `<button class="nav" type="button" data-shell="logout" title="로그아웃" aria-label="로그아웃">${icon("logout")}<span>로그아웃</span></button>`;
+    : `<button class="nav" type="button" data-shell="password" title="암호 바꾸기" aria-label="암호 바꾸기">${icon("key")}<span>암호 바꾸기</span></button>
+      <button class="nav" type="button" data-shell="logout" title="로그아웃" aria-label="로그아웃">${icon("logout")}<span>로그아웃</span></button>`;
   root.innerHTML = `<div class="app">
     <aside class="side">
       <div class="logo"><span class="nm">JOB<span>SIM</span></span><span class="mk" aria-hidden="true">J<span>S</span></span><span class="tag">Admin</span></div>
@@ -173,6 +175,7 @@ export function renderShell(root, ctx) {
   root.querySelector("#gloss-close").addEventListener("click", () => setGloss(false));
   root.querySelectorAll('[data-shell="ask"]').forEach((node) => node.addEventListener("click", () => ctx.askPassword?.()));
   root.querySelector('[data-shell="logout"]')?.addEventListener("click", () => ctx.logout?.());
+  root.querySelector('[data-shell="password"]')?.addEventListener("click", () => passwordDialog());
 
   paintUsage(ctx.status);
 }
@@ -252,6 +255,8 @@ export function renderStop(root, message, { retry } = {}) {
 // 암호 화면. onSubmit(암호)는 Promise를 돌려준다: 글자로 끝나면 그 글을 오류로 보이고 다시 입력받는다.
 // 그 밖(성공)이면 부른 쪽이 다음 화면을 그린다. onCancel을 주면 "조회만 하기" 버튼을 둔다(조회 전용 열기일 때).
 export function renderAuth(root, { error, onSubmit, onCancel } = {}) {
+  // 떠 있던 창(암호 바꾸기, 삭제 확인)은 닫는다. 넣던 암호가 암호 화면 위에 남지 않게 한다
+  document.querySelectorAll(".dlg-back").forEach((node) => node.remove());
   root.innerHTML = `<div class="auth">
     <form class="card auth-card" novalidate>
       ${logoHtml()}
@@ -339,6 +344,78 @@ export function confirmDialog({ title, body, okLabel = "확인", danger = false 
     document.body.appendChild(back);
     back.querySelector(danger ? '[data-act="cancel"]' : '[data-act="ok"]').focus();
   });
+}
+
+// 관리자 암호 바꾸기 창. 바꾸면 이 탭은 새 암호로 이어서 쓴다. Esc와 바깥 누르기, 취소는 닫기다.
+const PASSWORD_ALLOWED = /^[\x21-\x7e]{4,100}$/;   // 서버(adminAuth.ts)와 같은 조건: 공백 없는 영문 · 숫자 · 기호 4~100자
+
+export function passwordDialog() {
+  const back = document.createElement("div");
+  back.className = "dlg-back";
+  back.innerHTML = `<form class="dlg" role="dialog" aria-modal="true" aria-labelledby="adm-pw-title" novalidate>
+    <h2 id="adm-pw-title">관리자 암호 바꾸기</h2>
+    <label class="flbl" for="adm-pw-current">지금 암호</label>
+    <input class="input" id="adm-pw-current" type="password" autocomplete="current-password">
+    <label class="flbl" for="adm-pw-next">새 암호</label>
+    <input class="input" id="adm-pw-next" type="password" autocomplete="new-password">
+    <label class="flbl" for="adm-pw-confirm">새 암호 확인</label>
+    <input class="input" id="adm-pw-confirm" type="password" autocomplete="new-password">
+    <p class="hint">공백 없이 영문, 숫자, 기호로 4자 이상. 바꾸면 다른 창과 다른 사람은 새 암호를 다시 넣어야 합니다.</p>
+    <p class="auth-error" role="alert" hidden></p>
+    <div class="acts">
+      <button class="btn" type="button" data-act="cancel">취소</button>
+      <button class="btn pri" type="submit">바꾸기</button>
+    </div>
+  </form>`;
+  const form = back.querySelector("form");
+  const field = (id) => back.querySelector(`#${id}`);
+  const errorNode = back.querySelector(".auth-error");
+  const submit = form.querySelector('button[type="submit"]');
+  const before = document.activeElement;
+  const showError = (message) => {
+    errorNode.textContent = message || "";
+    errorNode.hidden = !message;
+  };
+  const close = () => {
+    document.removeEventListener("keydown", onKey, true);
+    back.remove();
+    if (before && typeof before.focus === "function" && before.isConnected) before.focus();
+  };
+  const onKey = (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+    }
+  };
+  back.addEventListener("mousedown", (event) => {
+    if (event.target === back) close();
+  });
+  back.querySelector('[data-act="cancel"]').addEventListener("click", close);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const current = field("adm-pw-current").value;
+    const next = field("adm-pw-next").value;
+    const confirm = field("adm-pw-confirm").value;
+    if (!current || !next || !confirm) return showError("세 칸을 모두 입력해 주세요.");
+    if (next !== confirm) return showError("새 암호와 새 암호 확인이 다릅니다.");
+    if (!PASSWORD_ALLOWED.test(next)) return showError(errorText("ADMIN_PASSWORD_INVALID"));
+    if (next === current) return showError(errorText("ADMIN_PASSWORD_SAME"));
+    showError("");
+    submit.disabled = true;
+    try {
+      await changePassword(current, next);
+    } catch (err) {
+      if (!back.isConnected) return;
+      if (err?.status === 401) return close();   // 이 탭의 암호가 더는 맞지 않는다. api.js가 암호 화면으로 보냈다
+      submit.disabled = false;
+      return showError(errorMessage(err));
+    }
+    close();
+    toast("암호를 바꿨습니다.");
+  });
+  document.addEventListener("keydown", onKey, true);
+  document.body.appendChild(back);
+  field("adm-pw-current").focus();
 }
 
 // 생성 결과를 지울 때 묻는 창. 서비스에 추가된 것이면 서비스에서도 빠진다고 알린다

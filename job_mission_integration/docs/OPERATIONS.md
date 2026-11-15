@@ -16,7 +16,9 @@ cp .env.server.example .env.server
 - `EVALUATE_RATE_LIMIT_MAX` (기본 `10`)
 - `EVALUATE_RATE_LIMIT_WINDOW_MS` (기본 `60000`)
 - `EVALUATION_LOG_RETENTION_DAYS` (기본 `14`)
-- `ADMIN_PASSWORD` (설정 시 관리자 API 호출에 `x-api-token` 헤더 필수)
+- `ADMIN_PASSWORD` (관리자 API 호출에 `x-api-token` 헤더로 보내는 처음 암호. 관리자 화면에서 암호를 바꾸면 바꾼 암호가 이 값보다 먼저다. 암호가 어디에도 없으면 관리자 API는 503으로 닫힌다)
+- `ADMIN_PASSWORD_MAX_ATTEMPTS` (같은 IP에서 1분 동안 받을 틀린 암호의 수. 기본 10, 0이면 끔. 프록시 뒤에서는 `TRUST_PROXY=true`여야 접속한 사람마다 따로 센다)
+- `ADMIN_PASSWORD_RESET` (`true`로 켜고 서버를 켜면 화면에서 바꾼 암호를 지우고 `ADMIN_PASSWORD`로 돌아간다. 되돌린 뒤에는 지운다)
 - `ADMIN_DEMO_UNLOCK` (`true`이면 시연용으로 관리자 잠금을 일시 해제하고 관리자 화면에 안내 팝업 표시)
 
 ## 2) 서버 실행 (PM2)

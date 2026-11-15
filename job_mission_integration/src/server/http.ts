@@ -72,6 +72,12 @@ export function getClientIp(req: express.Request) {
   return req.ip || req.socket.remoteAddress || "unknown";
 }
 
+// 믿을 수 있는 쪽의 주소. 요청이 보낸 X-Forwarded-For는 TRUST_PROXY를 켰을 때만 express가 req.ip에 반영한다.
+// 틀린 암호를 세는 것처럼 요청이 주소를 꾸며 피해 가면 안 되는 자리에서 쓴다.
+export function trustedClientIp(req: express.Request) {
+  return req.ip || req.socket.remoteAddress || "unknown";
+}
+
 export function extractApiToken(req: express.Request) {
   const headerToken = req.header("x-api-token");
   if (headerToken?.trim()) return headerToken.trim();

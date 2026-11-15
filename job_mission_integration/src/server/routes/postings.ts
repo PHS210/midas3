@@ -9,14 +9,15 @@ import type { PostingsService } from "../../lib/postings/service.js";
 import { maskSecrets } from "../../lib/postings/work24Client.js";
 import type { ServerConfig } from "../config.js";
 import { sendApiError } from "../http.js";
+import type { AdminAuth } from "../adminAuth.js";
 import { requireAdmin } from "../middleware.js";
 
 // 채용공고 API. 결과 화면 API는 스냅샷만 읽고 외부 API를 부르지 않는다.
-export function postingsRouter(config: ServerConfig, postingsConfig: PostingsConfig, postingsService: PostingsService) {
+export function postingsRouter(config: ServerConfig, auth: AdminAuth, postingsConfig: PostingsConfig, postingsService: PostingsService) {
   const router = express.Router();
   const secrets = [postingsConfig.work24Key, postingsConfig.kakaoKey];
-  // 채용공고 관리자 API는 ADMIN_DEMO_UNLOCK과 상관없이 항상 ADMIN_PASSWORD를 요구한다.
-  const requireAdminPassword = requireAdmin(config, { allowDemoRead: false });
+  // 채용공고 관리자 API는 ADMIN_DEMO_UNLOCK과 상관없이 항상 관리자 암호를 요구한다.
+  const requireAdminPassword = requireAdmin(config, auth, { allowDemoRead: false });
 
   router.get("/api/jobs/:jobCode/postings", (req, res) => {
     const params = JobPostingsParamsSchema.safeParse(req.params);
