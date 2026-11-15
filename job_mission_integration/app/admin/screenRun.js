@@ -1,5 +1,5 @@
 /* 실행 하나(#/runs/<실행 번호>). 실행의 상태에 따라 보이는 것이 바뀐다.
-   도는 중: 단계 여섯과 진행 막대(1.5초마다 다시 받는다). 실패 · 중단: 멈춘 단계와 이유.
+   도는 중: 단계 여섯과 진행 막대(1.5초마다 다시 받고, 그 사이 1초마다 경과 시간과 막대를 고친다). 실패 · 중단: 멈춘 단계와 이유.
    끝남(검토 대기 · 추가됨): 미리보기와 근거, 검수 탭.
    화면에 넣는 값은 모두 esc()를 거친다(renderMaterial은 스스로 거른다). */
 import { esc } from "../common/site.js";
@@ -14,6 +14,7 @@ import {
   STAGE_STATE_LABELS,
   STATUS_LABELS,
   errorText,
+  estimateText,
   pieceName,
   verdictView
 } from "./labels.js";
@@ -22,6 +23,11 @@ import { confirmDeleteRun, emptyLine, errorLine, errorMessage, icon, loadingLine
 const POLL_MS = 1500;
 const STARTING_LIMIT_MS = 10000;   // 막 시작한 실행이 이만큼 지나도 404면 찾을 수 없다고 본다
 const POLL_ERROR_AFTER = 3;        // 다시 받기가 이만큼 잇달아 실패하면 알린다
+const TICK_MS = 1000;              // 경과 시간과 막대를 고치는 간격
+const FINISH_HOLD_MS = 900;        // 다 만든 모습(막대가 끝까지 찬 모습)을 이만큼 보인 뒤 결과로 넘어간다
+const SANE_ELAPSED_MS = 20 * 60 * 1000;   // 서버가 적은 시각이 이보다 오래됐으면(검수만 다시 돌리기 등) 지금부터 센다
+const BLUEPRINT_SHARE = 0.45;      // 생성 예상 시간 가운데 설계의 몫. 나머지는 미션 작성
+const BAR_CAP = 97;                // 도는 동안 막대가 넘지 않는 값(%)
 const POLL_ERROR_TEXT = "서버에 연결하지 못했습니다. 다시 확인하는 중입니다.";
 const STAGE_COUNT =Object.keys(STAGE_LABELS).length;
 const STAGE_CLASS = { done: "done", active: "cur", pending: "wait", skipped: "skip", failed: "fail" };
@@ -105,10 +111,47 @@ function progressBar(stages) {
   return `<div class="pbar"><i style="width:${percent}%"></i></div>`;
 }
 
-function runningProgress(run) {
-  const active = list(run.stages).find((stage) => stage?.state === "active");
-  const now = active ? `${own(STAGE_LABELS, active.id) ?? active.id} 중` : STATUS_LABELS.running;
-  return `<div class="now"><span class="spin"></span>${esc(now)}</div>${progressBar(run.stages)}${stageRows(run.stages)}`;
+const activeStage = (run) => list(run.stages).find((stage) => stage?.state === "active");
+
+function nowText(run) {
+  const active = activeStage(run);
+  return active ? `${own(STAGE_LABELS, active.id) ?? active.id} 중` : STATUS_LABELS.running;
+}
+
+// 막대의 구간. 오래 걸리는 세 단계(설계, 미션 작성, 내용 검수)가 예상 시간만큼 몫을 갖고, 검사 단계는 바로 끝나므로 몫이 없다
+function barSpans(run, estimates) {
+  const entry = isObject(estimates) ? own(estimates, run.selection?.difficulty) : undefined;
+  const generate = count(entry?.generate?.seconds) || 75;
+  const review = run.selection?.review ? count(entry?.review?.seconds) || 20 : 0;
+  const blueprintEnd = (generate * BLUEPRINT_SHARE) / (generate + review);
+  const writingEnd = generate / (generate + review);
+  return {
+    blueprint: { from: 0, to: blueprintEnd, seconds: generate * BLUEPRINT_SHARE },
+    blueprint_check: { from: blueprintEnd, to: blueprintEnd, seconds: 0 },
+    writing: { from: blueprintEnd, to: writingEnd, seconds: generate * (1 - BLUEPRINT_SHARE) },
+    mission_check: { from: writingEnd, to: writingEnd, seconds: 0 },
+    review: { from: writingEnd, to: 1, seconds: review || 20 }
+  };
+}
+
+// 도는 중의 막대 값(%). 하는 중인 단계의 구간 안에서 지난 시간만큼 차오르되, 그 단계가 끝나기 전에는 구간 끝에 닿지 않는다
+function runningPercent(run, estimates, stageElapsedMs) {
+  const span = own(barSpans(run, estimates), activeStage(run)?.id);
+  if (!span) return 0;
+  const part = span.seconds > 0 ? 1 - Math.exp((-1.6 * Math.max(0, stageElapsedMs)) / (span.seconds * 1000)) : 1;
+  return Math.min(BAR_CAP, (span.from + (span.to - span.from) * part) * 100);
+}
+
+// 밀리초 → "1:05"
+function clockText(ms) {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+// 서버가 적은 시각이 지금보다 앞이고 너무 오래되지 않았으면 그 시각을, 아니면 지금을 준다
+function saneTime(iso, now) {
+  const time = Date.parse(iso);
+  return Number.isFinite(time) && time <= now && now - time <= SANE_ELAPSED_MS ? time : now;
 }
 
 function settingsCard(run) {
@@ -144,7 +187,12 @@ function runningView(run) {
   return `<div data-view="running">
     <div class="pagehead"><div><h1 class="h1">미션을 만들고 있습니다</h1><p class="sub">${esc(sub)}</p></div></div>
     <div class="g2">
-      <div class="card prog"><div data-role="poll-error"></div><div data-role="progress">${runningProgress(run)}</div></div>
+      <div class="card prog">
+        <div data-role="poll-error"></div>
+        <div class="now"><span class="spin" data-role="spin"></span><span data-role="now-text">${esc(nowText(run))}</span><span class="sp"></span><span class="elapsed" data-role="elapsed"></span></div>
+        <div class="pbar"><i data-role="bar" style="width:0%"></i></div>
+        <div data-role="stages">${stageRows(run.stages)}</div>
+      </div>
       ${settingsCard(run)}
     </div>
     ${logsCard(run)}
@@ -477,6 +525,13 @@ export function mount(view, ctx, params) {
     tab: "preview",
     part: null,          // 미리보기에서 고른 부분(basisFor에 넘기는 모양)
     timer: null,
+    ticker: null,        // 도는 중에 1초마다 경과 시간과 막대를 고치는 타이머
+    since: null,         // 경과 시간을 세기 시작한 때
+    stageId: null,       // 마지막으로 본 "하는 중" 단계와 그 단계를 보기 시작한 때
+    stageSince: 0,
+    shownRows: "",       // 마지막으로 그린 단계 줄(바뀌었을 때만 다시 그린다)
+    reviewOnly: false,   // 이 화면에서 "검수 돌리기"로 다시 돌린 것(생성은 이미 끝났다)
+    crumbRoot: null,     // 위 띠의 경로 앞 글. 도는 모습으로 처음 열었으면 "새 미션 만들기", 아니면 "생성 기록"
     stopped: false,
     busy: false,         // 추가 · 삭제 · 검수 요청이 도는 중
     startingSince: 0,    // 막 시작한 실행이라 404를 기다리기 시작한 때
@@ -495,6 +550,54 @@ export function mount(view, ctx, params) {
     state.timer = null;
   }
 
+  function stopTicker() {
+    clearInterval(state.ticker);
+    state.ticker = null;
+  }
+
+  const crumbRoot = () => state.crumbRoot ?? "생성 기록";
+  const runningLeaf = () => (state.reviewOnly ? "검수 중" : "생성 중");
+
+  function setText(box, role, text) {
+    const node = box.querySelector(`[data-role="${role}"]`);
+    if (node && node.textContent !== text) node.textContent = text;
+  }
+
+  // 도는 중 카드에서 글과 막대만 고친다. 스피너와 막대를 새로 만들지 않아야 움직임이 끊기지 않는다
+  function paintRunning() {
+    const run = state.run;
+    const box = view.querySelector('[data-view="running"]');
+    if (!box || !run || run.status !== "running") return;
+    const now = Date.now();
+    const stage = activeStage(run)?.id ?? "";
+    if (stage !== state.stageId) {
+      // 처음 본 단계는 서버가 적은 마지막 변경 시각부터, 보는 동안 바뀐 단계는 지금부터 센다
+      state.stageSince = state.stageId === null ? saneTime(run.updatedAt, now) : now;
+      state.stageId = stage;
+    }
+    if (state.since === null) state.since = state.reviewOnly ? now : saneTime(run.createdAt, now);
+    const expected = state.reviewOnly ? "—" : estimateText(ctx.status?.estimates, run.selection?.difficulty, Boolean(run.selection?.review)).time;
+    const elapsed = `경과 ${clockText(now - state.since)}`;
+    setText(box, "now-text", nowText(run));
+    setText(box, "elapsed", expected === "—" ? elapsed : `${elapsed} · 예상 ${expected}`);
+    const bar = box.querySelector('[data-role="bar"]');
+    if (bar) bar.style.width = `${runningPercent(run, ctx.status?.estimates, now - state.stageSince).toFixed(1)}%`;
+  }
+
+  // 다 만든 모습: 단계는 받은 그대로, 막대는 끝까지, 스피너 대신 확인 표시
+  function paintFinished(box, run) {
+    const stages = box.querySelector('[data-role="stages"]');
+    if (stages) stages.innerHTML = stageRows(run.stages);
+    const spin = box.querySelector('[data-role="spin"]');
+    if (spin) spin.outerHTML = `<span class="okmark">${icon("check", { size: 18, style: "stroke-width:2" })}</span>`;
+    setText(box, "now-text", state.reviewOnly ? "검수를 마쳤습니다" : "다 만들었습니다");
+    const bar = box.querySelector('[data-role="bar"]');
+    if (bar) {
+      bar.style.transitionDuration = ".4s";
+      bar.style.width = "100%";
+    }
+  }
+
   function renderNotFound() {
     stopPolling();
     ctx.setCrumb("생성 기록", "");
@@ -503,31 +606,37 @@ export function mount(view, ctx, params) {
   }
 
   function renderStarting() {
-    ctx.setCrumb("새 미션 만들기", "생성 중");
+    state.crumbRoot = "새 미션 만들기";
+    ctx.setCrumb(crumbRoot(), runningLeaf());
     state.sawRunning = true;
     view.innerHTML = `<div class="pagehead"><div><h1 class="h1">미션을 만들고 있습니다</h1><p class="sub">${esc(RUNNING_NOTE)}</p></div></div>
       <div class="card prog">${loadingLine("시작하는 중입니다")}</div>`;
   }
 
-  // 도는 중: 처음엔 통째로 그리고, 그 뒤로는 단계 카드와 로그만 바꾼다(펼친 로그가 접히지 않게)
+  // 도는 중: 처음엔 통째로 그리고, 그 뒤로는 바뀐 곳만 고친다(스피너가 끊기지 않고, 펼친 로그가 접히지 않게)
   function renderRunning() {
     const run = state.run;
-    ctx.setCrumb("새 미션 만들기", "생성 중");
+    ctx.setCrumb(crumbRoot(), runningLeaf());
     state.sawRunning = true;
-    const box = view.querySelector('[data-view="running"]');
+    const rows = stageRows(run.stages);
+    let box = view.querySelector('[data-view="running"]');
     if (!box) {
       view.innerHTML = runningView(run);
-      return;
+      box = view.querySelector('[data-view="running"]');
+    } else {
+      const stages = box.querySelector('[data-role="stages"]');
+      if (stages && state.shownRows !== rows) stages.innerHTML = rows;
+      showPollError(false);
+      const pre = box.querySelector(".logbox");
+      if (pre) {
+        const atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 4;
+        pre.textContent = logText(run);
+        if (atEnd) pre.scrollTop = pre.scrollHeight;
+      }
     }
-    const progress = box.querySelector('[data-role="progress"]');
-    if (progress) progress.innerHTML = runningProgress(run);
-    showPollError(false);
-    const pre = box.querySelector(".logbox");
-    if (pre) {
-      const atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 4;
-      pre.textContent = logText(run);
-      if (atEnd) pre.scrollTop = pre.scrollHeight;
-    }
+    state.shownRows = rows;
+    paintRunning();
+    if (!state.ticker) state.ticker = setInterval(paintRunning, TICK_MS);
   }
 
   function renderResult() {
@@ -545,19 +654,38 @@ export function mount(view, ctx, params) {
       return;
     }
     state.run = run;
+    if (state.crumbRoot === null) state.crumbRoot = run.status === "running" ? "새 미션 만들기" : "생성 기록";
     if (run.status === "running") {
       renderRunning();
       schedule();
       return;
     }
     stopPolling();
-    if (state.sawRunning) {
+    stopTicker();
+    const watched = state.sawRunning;
+    if (watched) {
       state.sawRunning = false;
       ctx.refreshUsage();
     }
-    ctx.setCrumb("생성 기록", run.missionTitle || own(STATUS_LABELS, run.status) || "");
-    if (run.status === "failed" || run.status === "interrupted") view.innerHTML = stoppedView(run, ctx);
-    else renderResult();
+    const settle = () => {
+      ctx.setCrumb(crumbRoot(), run.missionTitle || own(STATUS_LABELS, run.status) || "");
+      if (run.status === "failed" || run.status === "interrupted") view.innerHTML = stoppedView(run, ctx);
+      else renderResult();
+    };
+    // 도는 모습을 보다가 잘 끝났으면, 다 만든 모습을 잠깐 보인 뒤 결과로 넘어가고 한 줄로 알린다
+    const box = view.querySelector('[data-view="running"]');
+    if (watched && box && (run.status === "ready" || run.status === "added")) {
+      const message = state.reviewOnly ? "검수를 마쳤습니다." : "미션을 만들었습니다. 내용을 확인해 주세요.";
+      paintFinished(box, run);
+      state.timer = setTimeout(() => {
+        state.timer = null;
+        if (!alive()) return;
+        settle();
+        toast(message);
+      }, FINISH_HOLD_MS);
+      return;
+    }
+    settle();
   }
 
   // 도는 중 카드의 단계 목록 위에 "다시 확인하는 중" 한 줄을 보이거나 지운다
@@ -732,6 +860,10 @@ export function mount(view, ctx, params) {
     }
     state.busy = false;
     if (!alive()) return;
+    // 경과 시간과 막대를 검수 몫만으로 새로 센다
+    state.reviewOnly = true;
+    state.since = null;
+    state.stageId = null;
     if (isObject(body?.run)) show(body.run);
     else await refetch();
   }
@@ -764,5 +896,6 @@ export function mount(view, ctx, params) {
   return () => {
     state.stopped = true;
     stopPolling();
+    stopTicker();
   };
 }
