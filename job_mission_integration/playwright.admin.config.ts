@@ -28,7 +28,7 @@ export default defineConfig({
       PUBLIC_BASE_URL: "http://localhost:8093",
       EVAL_MODE: "fake",
       DATABASE_PATH: ":memory:",
-      ADMIN_PASSWORD: "pw",
+      ADMIN_PASSWORD: "pw-e2e",
       ADMIN_GENERATION_MODE: "fake",
       MISSIONS_DIR: "test-results/admin-missions",
       POSTINGS_FIXTURE: "1",

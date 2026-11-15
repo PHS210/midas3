@@ -91,19 +91,18 @@ export function formatWon(manwon) {
 
 const NAV = [
   { key: "jobs", href: "/jobs.html", label: "직무 탐색" },
-  { key: "compare", href: "/compare.html", label: "비교" },
   { key: "experience", href: "/index.html#simulation", label: "체험" },
   { key: "me", href: "/me.html", label: "내 기록" }
 ];
 
 // 모든 새 페이지 상단 헤더. activeKey는 NAV의 key.
-export async function renderHeader(activeKey, { compareCount = 0 } = {}) {
+export async function renderHeader(activeKey) {
   const host = document.getElementById("site-header");
   if (!host) return;
   host.innerHTML = `<nav class="site-nav" aria-label="주 메뉴">
     <a class="site-logo" href="/index.html">JOB<span>SIM</span></a>
     <div class="site-links">
-      ${NAV.map((item) => `<a href="${item.href}"${item.key === activeKey ? " aria-current=\"page\"" : ""}>${item.label}${item.key === "compare" ? `<span class="site-badge" data-compare-count${compareCount ? "" : " hidden"}>${compareCount}</span>` : ""}</a>`).join("")}
+      ${NAV.map((item) => `<a href="${item.href}"${item.key === activeKey ? " aria-current=\"page\"" : ""}>${item.label}</a>`).join("")}
     </div>
     <div class="site-user" id="site-user"></div>
   </nav>`;
@@ -123,11 +122,4 @@ export function renderFooter() {
     <a href="/terms.html">이용약관</a>
     <a href="/privacy.html">개인정보 처리방침</a>
   </footer>`;
-}
-
-export function updateCompareBadge(count) {
-  document.querySelectorAll("[data-compare-count]").forEach((node) => {
-    node.textContent = String(count);
-    node.hidden = !count;
-  });
 }

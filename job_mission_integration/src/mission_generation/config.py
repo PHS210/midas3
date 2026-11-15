@@ -158,13 +158,17 @@ def llm_provider() -> str:
 
 
 def _generation_speed() -> str | None:
-    """ANTHROPIC_GENERATION_SPEED를 읽는다. 비어 있으면 보통 속도(None), fast면 빠른 모드다."""
+    """ANTHROPIC_GENERATION_SPEED를 읽는다. 비어 있거나 standard면 보통 속도(None), fast면 빠른 모드다.
+
+    standard는 관리자 화면에서 빠른 모드를 끄고 만들 때 서버가 넘기는 값이다.
+    셸 환경 변수가 설정 파일보다 먼저이므로, 파일에 fast가 적혀 있어도 보통 속도로 돈다.
+    """
 
     value = local_env_value("ANTHROPIC_GENERATION_SPEED")
-    if value is None:
+    if value is None or value.lower() == "standard":
         return None
     if value.lower() != "fast":
-        raise ValueError(f"ANTHROPIC_GENERATION_SPEED must be fast or empty, got {value!r}")
+        raise ValueError(f"ANTHROPIC_GENERATION_SPEED must be fast, standard or empty, got {value!r}")
     return "fast"
 
 

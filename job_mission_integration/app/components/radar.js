@@ -21,10 +21,12 @@ export function radarSvg({ axes, labels, series, size = 300, idPrefix = "radar" 
   const text = axes.map((axis, i) => {
     const [x, y] = point(1.28, i);
     const anchor = x < cx - 6 ? "end" : x > cx + 6 ? "start" : "middle";
-    return `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="${anchor}" style="fill:#f7f8f8;font-size:12px;font-weight:600">${labels[axis]}</text>`;
+    return `<text class="radar-lbl" x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="${anchor}">${labels[axis]}</text>`;
   }).join("");
   const title = series.map((s) => s.label).join(" vs ");
-  return `<svg id="${idPrefix}" role="img" aria-label="${title} 레이더 차트" width="100%" viewBox="0 0 ${size} ${size + 12}" style="max-width:${size + 40}px;overflow:visible">${grid}${spokes}${polys}${text}</svg>`;
+  // 양옆 이름이 그림 밖으로 나가 좁은 화면에서 잘리지 않게, 좌우 여백(pad)을 그림 영역에 포함한다.
+  const pad = 44;
+  return `<svg id="${idPrefix}" role="img" aria-label="${title} 레이더 차트" width="100%" viewBox="${-pad} 0 ${size + pad * 2} ${size + 12}" style="max-width:${size + pad * 2 + 40}px;overflow:visible">${grid}${spokes}${polys}${text}</svg>`;
 }
 
 // 평가 로그에서 축별 평균 점수(0~4)

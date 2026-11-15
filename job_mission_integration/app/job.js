@@ -1,5 +1,4 @@
 import { api, esc, formatWon, getSession, loginUrl, qs, renderFooter, renderHeader, toast } from "./common/site.js";
-import { initCompareTray, isInCompare, readCompare, toggleCompare, COMPARE_MAX } from "./common/compareTray.js";
 import { pushRecent } from "./common/recent.js";
 import { jobImage } from "./common/jobImages.js";
 import { mountPostingsSection, renderPostingsSectionShell } from "./components/postingsSection.js";
@@ -98,12 +97,6 @@ async function renderInterest() {
     : `<button class="btn" type="button" data-action="save" aria-pressed="false">관심 직무 저장</button>`;
 }
 
-function renderCompareButton() {
-  const inCompare = isInCompare(job.code);
-  $("compare-btn").textContent = inCompare ? "비교에서 빼기" : "비교 담기";
-  $("compare-btn").setAttribute("aria-pressed", String(inCompare));
-}
-
 function render(meta) {
   document.title = `${job.name} — JOBSIM`;
   main.innerHTML = `
@@ -117,7 +110,6 @@ function render(meta) {
     </div>
     <div class="actions">
       ${job.experienceable ? `<a class="btn btn-p" href="/index.html?job=${esc(job.code)}#simulation">이 직무 체험하기</a>` : ""}
-      <button class="btn" type="button" id="compare-btn"></button>
       <span id="interest"></span>
     </div>
     ${job.experienceable ? "" : unavailableHtml()}
@@ -153,7 +145,6 @@ function render(meta) {
     <p class="source">출처: ${esc(meta.source)} · 임금 ${job.salary.year ?? "-"}년 · 전망 ${job.prospect.year ?? "-"}년 조사 · 역량·환경은 KNOW 재직자 조사 기준.
       ${job.keco ? `고용직업분류 ${esc(job.keco.code)} ${esc(job.keco.name)}.` : ""} 직업코드 ${esc(job.code)}</p>`;
   renderTraits();
-  renderCompareButton();
   renderInterest();
 
   // 관련 채용 공고(U23): 공고 연결이 있는 직무만 보여준다.
@@ -177,12 +168,6 @@ async function loadInterest() {
 async function onClick(event) {
   const target = event.target instanceof Element ? event.target : null;
   if (!target) return;
-  if (target.closest("#compare-btn")) {
-    const result = toggleCompare(job);
-    if (result === "full") toast(`비교함에는 최대 ${COMPARE_MAX}개까지 담을 수 있습니다. 하나를 뺀 뒤 다시 담아 주세요.`);
-    renderCompareButton();
-    return;
-  }
   const tab = target.closest("[data-tab]");
   if (tab) { traitTab = tab.dataset.tab; renderTraits(); return; }
   const order = target.closest("[data-order]");
@@ -208,9 +193,8 @@ async function onClick(event) {
 }
 
 async function start() {
-  renderHeader("jobs", { compareCount: readCompare().length });
+  renderHeader("jobs");
   renderFooter();
-  initCompareTray();
   const code = qs("code") || "";
   if (!/^K\d{9}$/.test(code)) {
     main.innerHTML = `<div class="empty">직무를 찾을 수 없습니다. <div class="btn-row"><a class="btn" href="/jobs.html">직무 탐색으로</a></div></div>`;
@@ -234,7 +218,6 @@ async function start() {
     return;
   }
   main.addEventListener("click", onClick);
-  window.addEventListener("jobsim:compare-changed", renderCompareButton);
 }
 
 start();

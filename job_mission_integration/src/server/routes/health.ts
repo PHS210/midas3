@@ -3,9 +3,10 @@ import type { Db } from "../../lib/db/database.js";
 import { currentSchemaVersion } from "../../lib/db/database.js";
 import { getEvalMode, getEvalModel, getEvalProvider } from "../../lib/evaluator/evaluateAnswer.js";
 import type { PostingsService } from "../../lib/postings/service.js";
+import type { AdminAuth } from "../adminAuth.js";
 import type { ServerConfig } from "../config.js";
 
-export function healthRouter(config: ServerConfig, db: Db, postingsService: PostingsService) {
+export function healthRouter(config: ServerConfig, db: Db, postingsService: PostingsService, auth: AdminAuth) {
   const router = express.Router();
   router.get("/health", (_req, res) => {
     let dbOk = true;
@@ -31,7 +32,7 @@ export function healthRouter(config: ServerConfig, db: Db, postingsService: Post
         window_ms: config.evaluateRateLimit.windowMs,
         max_requests: config.evaluateRateLimit.max
       },
-      admin_lock_enabled: Boolean(config.admin.password),
+      admin_lock_enabled: auth.hasPassword(),
       admin_demo_unlock_enabled: config.admin.demoUnlock,
       database: { ok: dbOk, schema_version: schemaVersion },
       auth: {

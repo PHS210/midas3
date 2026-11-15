@@ -1,5 +1,5 @@
 /* 관리자 화면 시작: 암호 확인 → 틀 → 주소(#)에 맞는 화면.
-   주소: #/new(기본), #/runs, #/runs/<실행 번호>, #/catalog. 그 밖의 값과 빈 값은 #/new로 본다. */
+   주소: #/new(기본), #/runs, #/runs/<실행 번호>, #/catalog(?mission=<미션 키>). 그 밖의 값과 빈 값은 #/new로 본다. */
 import { adminApi, clearToken, getToken, setAuthLostHandler, setToken, verifyToken } from "./api.js";
 import { errorText } from "./labels.js";
 import { errorLine, errorMessage, refreshUsage, renderAuth, renderLoading, renderShell, renderStop, setCrumb } from "./shell.js";
@@ -12,7 +12,8 @@ const ROUTES = [
   { pattern: /^#\/new$/, screen: screenNew, crumb: ["새 미션 만들기", "고르기"] },
   { pattern: /^#\/runs\/([^/]+)$/, screen: screenRun, crumb: ["생성 기록", ""], params: (match) => ({ runId: decodeURIComponent(match[1]) }) },
   { pattern: /^#\/runs$/, screen: screenHistory, crumb: ["생성 기록", ""] },
-  { pattern: /^#\/catalog$/, screen: screenCatalog, crumb: ["미션 카탈로그", ""] }
+  // #/catalog?mission=<미션 키>: 그 미션 줄이 보이게 펼치고 그 자리로 간다("카탈로그에서 보기")
+  { pattern: /^#\/catalog(?:\?mission=([^&]+))?$/, screen: screenCatalog, crumb: ["미션 카탈로그", ""], params: (match) => ({ missionKey: match[1] ? decodeURIComponent(match[1]) : "" }) }
 ];
 const DEFAULT_HASH = "#/new";
 

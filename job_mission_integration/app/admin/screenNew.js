@@ -14,6 +14,9 @@ import { emptyLine, errorLine, errorMessage, icon, loadingLine } from "./shell.j
 
 const DIFFICULTIES = ["easy", "normal", "hard"];
 const LINK_BADGE = { "직접": "badge ok", "분야 한정": "badge warn" };   // 서버가 주는 연결 표시(한국어 글자 그대로)
+const FAST_COUNT = 2;   // 빠른 모드 한 건이 쓰는 하루 건수(서버의 규칙과 같다)
+const FAST_NOTE = "약 2배 빠름 · 하루 한도 2건 사용";
+const FAST_BLOCKED_TEXT = "오늘 남은 건수가 1건이라 빠른 모드로는 만들 수 없습니다.";
 
 const own = (table, key) => (typeof key === "string" && Object.prototype.hasOwnProperty.call(table, key) ? table[key] : undefined);
 
@@ -31,6 +34,7 @@ export function mount(view, ctx) {
     unitKey: null,           // 고른 능력단위
     difficulty: "normal",
     review: true,
+    fast: ctx.status?.preflight?.speed === "fast",   // 빠른 모드. 처음 값은 서버 설정을 따른다(보통은 꺼짐)
     reasonOpen: false,       // "연결 근거"를 펼쳤나
     material: { state: "none", text: "" },   // none | loading | ok | error
     statusReady: false,      // 화면을 붙인 뒤 /status를 한 번 새로 받았나
@@ -275,14 +279,15 @@ export function mount(view, ctx) {
         <div class="hint" data-diff-hint></div></div>
       <div class="field"><div class="flbl">자료 형태 <span style="color:var(--tx4)">· 자동</span></div><div data-material></div></div>
       <div class="field toggle"><button type="button" class="sw" data-review aria-label="내용 검수 포함"></button><span>내용 검수 포함</span></div>
+      <div class="field toggle"><button type="button" class="sw" data-fast aria-label="빠른 모드" data-testid="fast-switch"></button><span>빠른 모드</span><span class="swnote">${esc(FAST_NOTE)}</span></div>
       <div class="hr"></div>
       <div class="est"><span>예상 소요</span><b data-est-time></b></div>
-      <div class="est"><span>예상 비용</span><b data-est-cost></b></div>
       <div data-action></div>`;
 
     renderUnitInfo();
     renderDifficulty();
     renderReview();
+    renderFast();
     renderMaterial();
     renderAction();
   }
@@ -324,12 +329,20 @@ export function mount(view, ctx) {
     renderEstimate();
   }
 
+  function renderFast() {
+    const sw = $("[data-fast]");
+    if (!sw) return;
+    sw.classList.toggle("off", !state.fast);
+    sw.setAttribute("aria-pressed", state.fast ? "true" : "false");
+    renderEstimate();
+  }
+
+  // 예상 소요. 빠른 모드면 빠른 모드의 예상 값을 쓴다
   function renderEstimate() {
-    const { time, cost } = estimateText(ctx.status?.estimates, state.difficulty, state.review);
+    const estimates = state.fast ? ctx.status?.estimatesFast : ctx.status?.estimates;
+    const { time } = estimateText(estimates, state.difficulty, state.review);
     const timeNode = $("[data-est-time]");
-    const costNode = $("[data-est-cost]");
     if (timeNode) timeNode.textContent = time;
-    if (costNode) costNode.textContent = cost;
   }
 
   function renderMaterial() {
@@ -377,6 +390,8 @@ export function mount(view, ctx) {
     const started = Number(status?.today?.started);
     const limit = Number(status?.today?.limit);
     if (Number.isFinite(started) && Number.isFinite(limit) && started >= limit) return { text: errorText("GENERATION_DAILY_LIMIT"), error: true };
+    // 빠른 모드는 하루 건수를 2건 쓴다. 1건만 남았으면 스위치를 꺼야 만들 수 있다
+    if (state.fast && Number.isFinite(started) && Number.isFinite(limit) && limit - started < FAST_COUNT) return { text: FAST_BLOCKED_TEXT, error: true };
     if (!state.execJobId || !state.unitKey) return { text: "하는 일 문장을 골라 주세요.", error: false };
     return null;
   }
@@ -434,7 +449,8 @@ export function mount(view, ctx) {
       execJobId: state.execJobId,
       unitKey: state.unitKey,
       difficulty: state.difficulty,
-      review: state.review
+      review: state.review,
+      fast: state.fast
     };
     state.starting = true;
     state.startError = null;
@@ -494,6 +510,14 @@ export function mount(view, ctx) {
       state.review = !state.review;
       state.startError = null;
       renderReview();
+      renderAction();
+      return;
+    }
+    if (target.closest("[data-fast]")) {
+      if (state.starting) return;
+      state.fast = !state.fast;
+      state.startError = null;
+      renderFast();
       renderAction();
       return;
     }

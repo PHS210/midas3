@@ -18,16 +18,16 @@ import {
 } from "./shell.js";
 
 const POLL_MS = 5000;   // 도는 중인 줄이 있을 때 목록을 다시 받는 간격
-const NO_VERDICT_STATUSES = ["failed", "interrupted", "running"];   // 미션이 없으면 검수 칸을 "—"로 두는 상태
+const NO_MISSION_STATUSES = ["failed", "interrupted"];   // 미션이 없으면 검수 칸을 "—"로 두는 상태
 
 function own(table, key) {
   return typeof key === "string" && Object.prototype.hasOwnProperty.call(table, key) ? table[key] : undefined;
 }
 
-// 검수 칸. 미션이 아직 없거나 만들지 못한 줄은 "검수 안 함" 대신 "—"
+// 검수 칸. 도는 중인 줄(검수가 아직 끝나지 않았다)과 미션을 만들지 못한 줄은 "검수 안 함" 대신 "—"
 function verdictCell(run) {
   const hasMission = Boolean(run.missionId || run.missionTitle);
-  if (!run.reviewVerdict && !hasMission && NO_VERDICT_STATUSES.includes(run.status)) {
+  if (!run.reviewVerdict && (run.status === "running" || (!hasMission && NO_MISSION_STATUSES.includes(run.status)))) {
     return `<span class="muted">—</span>`;
   }
   return verdictBadge(run.reviewVerdict);

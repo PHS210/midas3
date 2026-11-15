@@ -59,8 +59,7 @@ import {
   renderCompatibilitySection,
   renderGapSection,
   renderJobIntroSection,
-  renderRadarSection,
-  renderRecommendationsSection
+  renderRadarSection
 } from "./components/resultDashboard.js";
 import {
   mountPostingsSection,
@@ -155,9 +154,18 @@ function doneM() { return 0; }
 function isLast() { return true; }
 
 const APP = document.getElementById("app");
+// 체험 영역(#simulation)은 긴 첫 페이지 중간에 있어, 단계가 바뀌어 화면이 짧아지면 아래 구역이 보인다.
+// 그래서 단계가 바뀔 때는 체험 영역 맨 위로 스크롤을 맞춘다.
+function scrollToSimulation() {
+  document.getElementById("simulation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+let renderedScreen = null;
 function render({ scroll = true } = {}) {
   const fn = { select: rSelect, preq: rPreq, "mission-list": rMissionList, mission: rMission, result: rResult, retry: rRetry }[state.screen];
   if (fn) {
+    // 같은 단계 안에서 다시 그릴 때(카드 선택 등)는 스크롤을 건드리지 않는다.
+    const screenChanged = renderedScreen !== null && renderedScreen !== state.screen;
+    renderedScreen = state.screen;
     // 이전 결과 화면의 지도(Leaflet 인스턴스)를 먼저 정리해야 다시 그릴 때 충돌하지 않는다.
     unmountPostingsSection();
     const notice = pendingNotice && (state.screen === "select" || state.screen === "preq")
@@ -167,7 +175,9 @@ function render({ scroll = true } = {}) {
     APP.innerHTML = notice + fn();
     document.body.dataset.screen = state.screen;
     if (state.screen === "result" && scroll) window.scrollTo({ top: 0, behavior: "smooth" });
+    else if (state.screen !== "result" && scroll && screenChanged) scrollToSimulation();
     bindEvents();
+    bindAnswerJump();
     if (state.screen === "result") {
       mountPostings();
       mountResultExtras();
@@ -175,6 +185,22 @@ function render({ scroll = true } = {}) {
     }
     if (state.screen === "retry") bindRetryScreen();
   }
+}
+
+// 좁은 화면의 미션 단계: 답 입력 영역이 화면 밖일 때만 '답변 쓰러 가기' 버튼을 보인다(버튼이 뜨는 화면 폭은 CSS가 정한다).
+let answerJumpObserver = null;
+function bindAnswerJump() {
+  answerJumpObserver?.disconnect();
+  answerJumpObserver = null;
+  const button = document.getElementById("btn-ans-jump");
+  const panel = APP.querySelector(".mis-right");
+  if (!button || !panel || typeof IntersectionObserver === "undefined") return;
+  answerJumpObserver = new IntersectionObserver(([entry]) => { button.hidden = entry.isIntersecting; });
+  answerJumpObserver.observe(panel);
+  button.addEventListener("click", () => {
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("m-ans")?.focus({ preventScroll: true });
+  });
 }
 
 function mountPostings() {
@@ -252,7 +278,7 @@ function rResult() {
   ${rRadar()}${renderInterpretation(extras)}
   ${renderPostSurvey(extras)}<div id="interest-change-slot">${renderInterestChange(extras)}</div>
   ${rEvidence()}${renderEvidenceHighlight(extras)}
-  ${rJobIntro()}${rCompat()}${rQuad()}${rRec()}${rGap()}${rEvaluationLogSummary()}
+  ${rJobIntro()}${rCompat()}${rQuad()}${rGap()}${rEvaluationLogSummary()}
   ${renderRetrySection(extras)}${renderNextMissions(extras)}
   ${renderPostingsSectionShell()}
   ${renderRequirementShell()}${renderStrengthShell()}
@@ -317,16 +343,6 @@ function rQuad() {
     selectedJobs: state.selectedJobs,
     jobDefs: resultJobDefs(),
     jobInsights: state.resultSummary?.jobInsights || {}
-  });
-}
-
-function rRec() {
-  return renderRecommendationsSection({
-    state,
-    jobDefs: resultJobDefs(),
-    axes: AXES,
-    axisLabels: AX_LABELS,
-    radarScale: RADAR_SCALE
   });
 }
 
@@ -655,7 +671,8 @@ function flowContext() {
     startMission,
     onAnswerInput: scheduleDraftSave,
     onAnswerSubmitted,
-    onResultShown: () => void saveAttemptSnapshot()
+    onResultShown: () => void saveAttemptSnapshot(),
+    scrollToSimulation
   };
   return {
     ...ctx,
@@ -765,6 +782,22 @@ async function bootstrap() {
   }
   if (fromUrl) document.getElementById("simulation")?.scrollIntoView({ behavior: "smooth" });
 }
+// 쓰던 답이 사라질 수 있을 때 새로고침·뒤로 가기·다른 페이지 이동을 누르면 브라우저가 한 번 묻게 한다.
+// 로그인한 사용자의 미션 답은 자동 저장되어 '이어 쓰기'로 되살릴 수 있으므로 묻지 않는다.
+function hasUnsavedWork() {
+  if (state.pendingScores.length > 0) return true;
+  if (state.screen === "mission") return !SESSION.authenticated && state.missionAnswer.trim().length > 0;
+  if (state.screen === "retry" && state.retry && !state.retry.second) {
+    return (state.retry.draft || "").trim() !== (state.retry.first?.answer || "").trim();
+  }
+  return false;
+}
+window.addEventListener("beforeunload", (event) => {
+  if (!hasUnsavedWork()) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
+
 window.goSim = function () {
   document.getElementById("simulation").scrollIntoView({ behavior: "smooth" });
 };

@@ -38,6 +38,42 @@ test("생성 한 건: 시작부터 검토 대기까지, 검수를 끄면 검수 
   assert.equal(commands.calls.filter((c) => c === "review").length, 1);
 });
 
+test("빠른 모드: 하루 한도를 2건 쓰고, 남은 건수가 모자라면 시작하지 않으며, 생성과 검수에 속도를 넘긴다", async () => {
+  const ws = makeAdminWorkspace();
+  ws.config.adminGeneration.dailyLimit = 3;
+  const { service, commands, db } = makeService(ws);
+
+  const fast = await service.start({ ...PICK, fast: true });
+  assert.equal(fast.selection.fast, true);
+  await service.settled();
+  assert.equal((await service.status()).today.started, 2);
+  assert.deepEqual(commands.speeds, [{ call: "generate", speed: "fast" }, { call: "review", speed: "fast" }]);
+
+  // 남은 1건: 빠른 모드는 거절되고 건수와 잠금은 그대로다
+  await assert.rejects(service.start({ ...PICK, fast: true }), (e: any) => e.status === 429 && e.code === "GENERATION_DAILY_LIMIT" && e.details.needed === 2);
+  assert.equal((await service.status()).today.started, 2);
+
+  const normal = await service.start({ ...PICK, review: false, fast: false });
+  assert.equal(normal.selection.fast, false);
+  await service.settled();
+  assert.equal((await service.status()).today.started, 3);
+  assert.deepEqual(commands.speeds.at(-1), { call: "generate", speed: "standard" });
+
+  // 검수만 다시 돌리기: 그 실행의 속도로 돌고 건수는 늘지 않는다
+  await service.rerunReview(normal.runId);
+  await service.settled();
+  assert.deepEqual(commands.speeds.at(-1), { call: "review", speed: "standard" });
+  assert.equal((await service.status()).today.started, 3);
+  assert.deepEqual((await service.status()).estimatesFast.normal, { generate: { seconds: 30 }, review: { seconds: 10 } });
+
+  // 속도 칸이 생기기 전에 만든 기록(칸 없이 넣은 줄)은 보통 속도로 읽힌다
+  db.prepare(`INSERT INTO admin_generation_runs (id, status, stage, job_code, job_name, exec_job_id, exec_job_text, unit_key, unit_name, link_kind,
+    difficulty, review_requested, rewrites, created_at, updated_at) VALUES (?, 'ready', 'done', 'K900000001', '시범 직업 가', 'exec_001', '문장 하나',
+    '90000001:01', '시범 능력단위 하나', '직접', 'normal', 0, '{"blueprint":0,"mission":0}', ?, ?)`)
+    .run("44444444-4444-4444-8444-444444444444", "2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z");
+  assert.equal(service.get("44444444-4444-4444-8444-444444444444")!.selection.fast, false);
+});
+
 test("거의 동시에 두 번 시작하면 한 건만 돈다", async () => {
   const { service, commands } = makeService(makeAdminWorkspace());
   const results = await Promise.allSettled([service.start(PICK), service.start(PICK)]);
@@ -297,6 +333,7 @@ test("관리자 생성 경로: 직업 → 문장 → 형태 → 생성 → 기�
 
     const started = await c.request("POST", `${BASE}/runs`, PICK, TOKEN);
     assert.deepEqual([started.status, started.json.run.status], [202, "running"]);
+    assert.equal(started.json.run.selection.fast, false);   // fast 없이 보낸 요청(예전 화면)은 보통 속도다
     const runId = started.json.run.runId;
     const ready = await waitForRun(c, runId);
     assert.equal(ready.status, "ready");

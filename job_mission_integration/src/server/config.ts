@@ -36,7 +36,7 @@ export interface ServerConfig {
   };
   dbPath: string;
   openai: { evalModel: string; generationModel: string; preflightTimeoutMs: number };
-  admin: { password: string; demoUnlock: boolean };
+  admin: { password: string; demoUnlock: boolean; passwordReset: boolean; maxAttempts: number };
   adminGeneration: {
     mode: "live" | "fake";
     dailyLimit: number;
@@ -59,6 +59,13 @@ export interface ServerConfig {
     sessionMaxDays: number;
     anonymousRetentionHours: number;
   };
+}
+
+function nonNegativeIntFromEnv(value: string | undefined, fallback: number): number {
+  const text = (value ?? "").trim();
+  if (!text) return fallback;
+  const parsed = Number(text);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
 export function loadServerConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
@@ -93,8 +100,13 @@ export function loadServerConfig(env: NodeJS.ProcessEnv = process.env): ServerCo
       preflightTimeoutMs: Math.max(1_000, positiveIntFromEnv(env.OPENAI_PREFLIGHT_TIMEOUT_MS, 15_000))
     },
     admin: {
+      // 처음 암호. 관리자 화면에서 암호를 바꾸면 그 암호가 이 값보다 먼저다(src/server/adminAuth.ts).
       password: (env.ADMIN_PASSWORD ?? "").trim(),
-      demoUnlock: envFlag(env.ADMIN_DEMO_UNLOCK)
+      demoUnlock: envFlag(env.ADMIN_DEMO_UNLOCK),
+      // 켜고 서버를 켜면 화면에서 바꾼 암호를 지우고 처음 암호로 돌아간다. 되돌린 뒤에는 지운다.
+      passwordReset: envFlag(env.ADMIN_PASSWORD_RESET),
+      // 같은 IP에서 1분에 받을 틀린 암호의 수. 비우면 10, 0이면 제한을 끈다.
+      maxAttempts: nonNegativeIntFromEnv(env.ADMIN_PASSWORD_MAX_ATTEMPTS, 10)
     },
     adminGeneration: {
       // 가짜 모드(생성·검수 없이 고정 결과를 복사)는 운영(APP_ENV=production)에서는 설정과 상관없이 꺼진다.

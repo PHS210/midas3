@@ -1,7 +1,7 @@
 /* 미리보기의 한 부분 → 근거 기록(generation_basis.json의 chain)에서 보여 줄 것. 순수 함수다(DOM을 쓰지 않는다).
    기록의 글은 줄이거나 다듬지 않고 그대로 담는다. 바꾸는 것은 조각 번호(renamePieces) 하나뿐이다.
    옛 실행이나 빈 칸처럼 그 부분의 근거가 기록에 없으면 null을 돌려준다(화면은 "이 부분의 근거 기록이 없습니다"를 보인다). */
-import { KIND_LABELS, pieceName, renamePieces } from "./labels.js";
+import { pieceName, renamePieces } from "./labels.js";
 
 const MADE_UP_NOTE = "자료 안의 회사 이름, 날짜, 숫자는 지어낸 값입니다.";
 
@@ -25,22 +25,11 @@ function sourcesOf(refs, idKey = "id") {
     .map((ref) => ({ name: String(pieceName(ref[idKey]) ?? ""), text: ref.text }));
 }
 
-// 정한 주체: 단계의 kind 말과 decided_by. decided_by가 이미 kind 말로 시작하면 겹쳐 쓰지 않는다
-function decidedByOf(step) {
-  const kind = step?.kind;
-  const kindLabel = typeof kind === "string" && Object.prototype.hasOwnProperty.call(KIND_LABELS, kind) ? KIND_LABELS[kind] : hasText(kind) ? kind : "";
-  const by = hasText(step?.decided_by) ? step.decided_by : "";
-  if (!kindLabel || !by) return kindLabel || by;
-  return by === kindLabel || by.startsWith(`${kindLabel} `) ? by : `${kindLabel} · ${by}`;
-}
-
-// 보여 줄 것이 하나도 없으면(빈 칸) null. notes는 늘 붙는 안내라 있고 없음을 따지지 않는다
-function view(step, why, sources, details, notes = []) {
+// 보여 줄 것이 하나도 없으면(빈 칸) null. notes는 늘 붙는 안내라 있고 없음을 따지지 않는다.
+// 단계를 누가 정했는지(기록의 kind, decided_by)는 화면에 보이지 않는다
+function view(why, sources, details, notes = []) {
   if (!why.length && !sources.length && !details.length) return null;
-  const decidedBy = decidedByOf(step);
-  const all = [...details, ...notes];
-  if (decidedBy) all.push({ label: "정한 주체", value: decidedBy });
-  return { why, sources, details: all, decidedBy };
+  return { why, sources, details: [...details, ...notes] };
 }
 
 function toIndex(value) {
@@ -61,7 +50,7 @@ function materialBasis(step, id) {
   if (!material) return null;
   const terms = list(material.borrowed_terms).filter((term) => isObject(term) && hasText(term.term)).map(termText);
   const details = terms.length ? [{ label: "가져온 낱말", value: terms.join(" · ") }] : [];
-  return view(step, texts([material.role, material.type_reason]), sourcesOf(material.refs), details, [{ label: "참고", value: MADE_UP_NOTE }]);
+  return view(texts([material.role, material.type_reason]), sourcesOf(material.refs), details, [{ label: "참고", value: MADE_UP_NOTE }]);
 }
 
 // 과제(5단계 tasks[])
@@ -69,7 +58,7 @@ function taskBasis(step, id) {
   if (!hasText(id)) return null;
   const task = list(step?.tasks).find((item) => isObject(item) && item.task_id === id);
   if (!task) return null;
-  return view(step, texts([task.reason]), sourcesOf(task.refs), []);
+  return view(texts([task.reason]), sourcesOf(task.refs), []);
 }
 
 // 채점 기준(6단계 items[]). 평가 지침(refs)과 KNOW 항목(know_refs)을 함께 근거로 든다
@@ -78,7 +67,7 @@ function rubricBasis(step, index) {
   if (wanted === null) return null;
   const item = list(step?.items).find((it) => isObject(it) && toIndex(it.rubric_index) === wanted);
   if (!item) return null;
-  return view(step, texts([item.reason, item.what_to_check]), [...sourcesOf(item.refs), ...sourcesOf(item.know_refs)], []);
+  return view(texts([item.reason, item.what_to_check]), [...sourcesOf(item.refs), ...sourcesOf(item.know_refs)], []);
 }
 
 function countText(name, range) {
@@ -91,13 +80,13 @@ function countText(name, range) {
 function pathBasis(chain, node) {
   if (node === "sentence") {
     const step = stepOf(chain, 1);
-    return step ? view(step, [], sourcesOf(list(step.sources).slice(0, 1)), []) : null;
+    return step ? view([], sourcesOf(list(step.sources).slice(0, 1)), []) : null;
   }
   if (node === "unit") {
     const step = stepOf(chain, 3);
     if (!step) return null;
     const details = hasText(step.match) ? [{ label: "연결", value: step.match }] : [];
-    return view(step, texts([step.reason, step.verdict_reason]), sourcesOf(step.criteria_refs, "ref"), details);
+    return view(texts([step.reason, step.verdict_reason]), sourcesOf(step.criteria_refs, "ref"), details);
   }
   if (node === "criteria") {
     const step = stepOf(chain, 4);
@@ -109,7 +98,7 @@ function pathBasis(chain, node) {
         const name = String(pieceName(item.ref) ?? "");
         return name ? `${name}: ${renamePieces(item.reason)}` : renamePieces(item.reason);
       });
-    return view(step, why, sourcesOf(items, "ref"), []);
+    return view(why, sourcesOf(items, "ref"), []);
   }
   if (node === "mission") {
     const rule = stepOf(chain, 7);
@@ -120,13 +109,13 @@ function pathBasis(chain, node) {
     const details = counts.length ? [{ label: "난이도 규칙", value: counts.join(" · ") }] : [];
     const note = isObject(focusStep?.focus) ? focusStep.focus.uncovered_note : null;
     if (hasText(note)) details.push({ label: "다루지 않는 부분", value: renamePieces(note) });
-    return view(rule ?? focusStep, [], [], details);
+    return view([], [], details);
   }
   return null;
 }
 
 // part: { kind: "material", id } | { kind: "task", id } | { kind: "rubric", index } | { kind: "path", node: "sentence" | "unit" | "criteria" | "mission" }
-// → { why: string[], sources: { name, text }[], details: { label, value }[], decidedBy: string } 또는 null
+// → { why: string[], sources: { name, text }[], details: { label, value }[] } 또는 null
 export function basisFor(basis, part) {
   const chain = isObject(basis) ? list(basis.chain) : [];
   if (!chain.length || !isObject(part)) return null;

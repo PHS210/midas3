@@ -11,11 +11,6 @@ function missionTheme(mission) {
   return themeMap[topAxis] || mission.title;
 }
 
-function similarityToPct(similarity) {
-  const normalized = Math.min(Math.max(typeof similarity === "number" ? similarity : 0, 0), 1);
-  return Math.round(Math.pow(normalized, 1.5) * 100);
-}
-
 function gapCompareText(answer, missions) {
   const themes = missions.filter(Boolean).map(missionTheme).filter(Boolean);
   if (!themes.length) return "미션 데이터 없음";
@@ -106,8 +101,8 @@ export function renderRadarSection({
     const textAnchor = labelX < centerX - 8 ? "end" : labelX > centerX + 8 ? "start" : "middle";
     const value = absolute[axis.key]?.pct || 0;
     const [profileX, profileY] = point(radius * (absolute[axis.key]?.ratio || 0) + 14, index);
-    return `<text x="${labelX}" y="${labelY + 4}" text-anchor="${textAnchor}" style="fill:#f7f8f8;font-size:12px;font-weight:600">${axis.label}</text>
-    <text x="${profileX}" y="${profileY + 4}" text-anchor="middle" style="fill:#7b83e0;font-size:11px;font-weight:700">${value}%</text>`;
+    return `<text class="radar-lbl" x="${labelX}" y="${labelY + 4}" text-anchor="${textAnchor}">${axis.label}</text>
+    <text class="radar-val" x="${profileX}" y="${profileY + 4}" text-anchor="middle">${value}%</text>`;
   }).join("");
 
   const bestWeights = bestMatch?.referenceWeights || null;
@@ -144,7 +139,7 @@ export function renderRadarSection({
   <div class="rs-title">나의 5가지 사고 스타일</div>
   <div class="axis-note">각 축은 독립적인 절대값(0~100)으로 표시됩니다. 축 퍼센트를 합산하지 않습니다.</div>
   ${measuredAxes.length < axes.length ? `<div class="axis-note">⚠️ AX4/AX5처럼 일부 축은 이번 미션 세트에서 미측정일 수 있습니다.</div>` : ""}
-  <div class="radar-wrap"><svg width="370" height="335" viewBox="0 0 370 335" style="overflow:visible">
+  <div class="radar-wrap"><svg class="radar-main" width="100%" viewBox="-45 0 460 335" style="max-width:460px;overflow:visible">
     ${grid}${axisLines}${myPolygon}${labels}
   </svg></div><div class="axis-score-grid">${scoreRows}</div></div>`;
 }
@@ -214,70 +209,6 @@ export function renderCompatibilitySection({ state, jobDefs }) {
   }).join("");
 
   return `<div class="rs"><div class="rs-title">이 직무와 나는 얼마나 잘 맞을까요?</div><div class="compat-list">${rows}</div></div>`;
-}
-
-export function renderRecommendationsSection({
-  state,
-  jobDefs,
-  axes,
-  axisLabels,
-  radarScale
-}) {
-  const profile = state.axisProfile || {};
-  const summary = state.resultSummary || {};
-  const blocks = state.selectedJobs.map((jobCode) => {
-    const job = jobDefs.find((item) => item.job_code === jobCode);
-    const meta = summary.selectedJobMeta?.[jobCode] || {};
-    const score = state.compatibility[jobCode] || 0;
-    const recommendations = summary.recommendations?.[jobCode] || [];
-    if (!recommendations.length) return "";
-
-    const cards = recommendations.map((recommendation) => {
-      const similarityPct = typeof recommendation.similarityPct === "number"
-        ? recommendation.similarityPct
-        : similarityToPct(recommendation.similarity);
-
-      const bars = axes.map((axis) => {
-        const jobValue = Math.min((recommendation.weights?.[axis] || 0) * radarScale * 100, 100);
-        const myValue = Math.min((profile[axis] || 0) * radarScale * 100, 100);
-        // 겹친 구간과 내 성향이 더 긴 구간을 같은 보라 계열의 진하기 차이로 구분한다.
-        const overlapValue = Math.min(jobValue, myValue);
-        const extraValue = Math.max(myValue - jobValue, 0);
-        const diff = Math.abs(jobValue - myValue);
-        const matchColor = diff < 15 ? "var(--success)" : diff < 30 ? "var(--warn)" : "var(--danger)";
-        return `<div class="ax-row">
-          <span class="ax-lbl">${axisLabels[axis].split("·")[0]}</span>
-          <div class="ax-bw" title="내 성향 ${myValue.toFixed(0)}%, 직업 기준 ${jobValue.toFixed(0)}%">
-            <div class="ax-bf-job" style="width:${jobValue.toFixed(0)}%"></div>
-            <div class="ax-bf-me-overlap${extraValue > 0 ? " ax-bf-me-joined" : ""}" style="width:${overlapValue.toFixed(0)}%"></div>
-            ${extraValue > 0 ? `<div class="ax-bf-me-extra" style="left:${overlapValue.toFixed(0)}%;width:${extraValue.toFixed(0)}%"></div>` : ""}
-          </div>
-          <span class="ax-vals" style="color:${matchColor}">${diff < 15 ? "✓" : diff < 30 ? "△" : "▽"}</span>
-        </div>`;
-      }).join("");
-
-      return `<div class="rec-card">
-        <div class="rec-hdr">
-          <span class="rec-jname">${recommendation.name}</span>
-          <span class="rec-pct">유사도 ${similarityPct}%</span>
-        </div>
-        <div style="font-size:11px;color:var(--sub);margin-bottom:8px">📊 파란 막대는 내 성향, 금색은 이 직업의 기준입니다</div>
-        <div class="ax-bars">${bars}</div>
-      </div>`;
-    }).join("");
-
-    const lowMessage = score < 60
-      ? `<p style="font-size:13px;color:var(--sub);margin-bottom:12px">${job.job_name} 적합도 <b style="color:var(--warn)">${score}점</b> — 같은 계열에서 더 잘 맞는 직업을 찾아보았습니다.</p>`
-      : `<p style="font-size:13px;color:var(--sub);margin-bottom:12px">같은 직업군${meta.clusterId ? `(군집 ${meta.clusterId})` : ""} 내 유사 직업도 살펴보세요.</p>`;
-
-    return `<div style="margin-bottom:28px">
-      <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px">${job.icon} ${job.job_name} 관련 추천</div>
-      ${lowMessage}<div class="rec-list">${cards}</div>
-    </div>`;
-  }).join("");
-
-  if (!blocks.trim()) return "";
-  return `<div class="rs"><div class="rs-title">👀 함께 살펴볼 만한 직업</div>${blocks}</div>`;
 }
 
 export function renderGapSection({ state, jobDefs, getMissionsByJobCode, esc }) {

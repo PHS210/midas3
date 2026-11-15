@@ -15,7 +15,7 @@ export interface JobsDeps {
   postingsService: PostingsService;
 }
 
-// 직무 탐색·상세·비교 API. 탐색 필터링은 브라우저가 목록을 받아 바로 한다.
+// 직무 탐색·상세 API. 탐색 필터링은 브라우저가 목록을 받아 바로 한다.
 export function jobsRouter({ jobsCatalog, missionStore, postingsService }: JobsDeps) {
   const router = express.Router();
 
@@ -52,16 +52,6 @@ export function jobsRouter({ jobsCatalog, missionStore, postingsService }: JobsD
     }));
     if (!jobs.length) return sendApiError(res, 400, "AXIS_INVALID", "axis는 AX1~AX5 중 하나여야 합니다.");
     return res.json({ axis: req.params.axis, jobs });
-  });
-
-  router.get("/api/jobs/compare", (req, res) => {
-    const codes = String(req.query.codes ?? "").split(",").map((code) => code.trim()).filter(Boolean);
-    if (!codes.length || codes.length > 3 || !codes.every((code) => CodeSchema.safeParse(code).success)) {
-      return sendApiError(res, 400, "COMPARE_BAD_REQUEST", "codes에는 직업코드 1~3개를 쉼표로 구분해 보내 주세요.");
-    }
-    const exp = experienceable();
-    const jobs = codes.map((code) => jobsCatalog.get(code)).filter(Boolean).map((job) => ({ ...job!, experienceable: exp.has(job!.code) }));
-    return res.json({ meta: jobsCatalog.meta, descriptions: jobsCatalog.descriptions, jobs });
   });
 
   // 공고 요구역량(U25): 최근 공고 문장을 5개 역량으로 나눠 센 비중

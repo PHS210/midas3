@@ -204,7 +204,7 @@ export function refreshMissionNextButton(ctx) {
 }
 
 export function advanceMissionFlow(ctx) {
-  const { appNode, state, fetchResultSummary, render, onResultShown = () => {} } = ctx;
+  const { appNode, state, fetchResultSummary, render, onResultShown = () => {}, scrollToSimulation = () => {} } = ctx;
 
   const showResult = async () => {
     await fetchResultSummary();
@@ -219,6 +219,8 @@ export function advanceMissionFlow(ctx) {
       <div style="font-size:16px;font-weight:600">결과를 분석하고 있습니다</div>
       <div style="font-size:13px;color:var(--sub);text-align:center">AI가 답변을 검토하고 있습니다.<br>잠시만 기다려 주세요.</div>
     </div>`;
+    // 긴 미션 화면 아래쪽에서 제출하면 대기 화면이 짧아 아래 구역이 보이므로 체험 영역으로 맞춘다.
+    scrollToSimulation();
     Promise.all(state.pendingScores).then(async () => {
       state.pendingScores = [];
       await showResult();

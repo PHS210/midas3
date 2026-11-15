@@ -17,7 +17,14 @@ test("판정과 예상 시간의 말", () => {
   const est = { easy: { generate: { seconds: 60, usd: 0.25 }, review: { seconds: 20, usd: 0.06 } }, hard: { generate: { seconds: 125, usd: 0.4 }, review: { seconds: 40, usd: 0.12 } } };
   assert.deepEqual(estimateText(est, "hard", true), { time: "약 3분", cost: "약 $0.52" });
   assert.deepEqual(estimateText(est, "easy", false), { time: "약 1분", cost: "약 $0.25" });
+  // 예상 시간은 30초 단위로 올림한다(모자라게 말하지 않는다). 1분이 안 되면 초를 말하지 않고 "1분 이내"라고 쓴다
+  assert.equal(estimateText({ normal: { generate: { seconds: 30 }, review: { seconds: 10 } } }, "normal", true).time, "1분 이내");
+  assert.equal(estimateText({ normal: { generate: { seconds: 30 }, review: { seconds: 10 } } }, "normal", false).time, "1분 이내");
+  assert.equal(estimateText({ hard: { generate: { seconds: 50 }, review: { seconds: 20 } } }, "hard", true).time, "약 1분 30초");
+  assert.equal(estimateText({ normal: { generate: { seconds: 75 }, review: { seconds: 20 } } }, "normal", true).time, "약 2분");
   assert.equal(errorText("없는_코드"), "요청을 처리하지 못했습니다. (없는_코드)");
+  // 실패한 실행의 화면 글에는 코드를 쓰지 않는다
+  assert.deepEqual(["VALIDATION_FAILED", "BLUEPRINT_LLM_FAILED", "GENERATION_INTERNAL_ERROR", "GENERATION_TIMEOUT"].map((code) => /[A-Z_]{5,}/.test(errorText(code, { failedRun: true }))), [false, false, false, false]);
 });
 
 test("근거 찾기: 기록의 글을 그대로 보여 주고, 없는 부분은 null이다", () => {   // Review Focus 4

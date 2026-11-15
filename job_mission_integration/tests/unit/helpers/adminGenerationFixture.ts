@@ -30,6 +30,7 @@ export function sampleRunRow(overrides: Partial<NewRunRow> = {}): NewRunRow {
     link_kind: "직접",
     difficulty: "normal",
     review_requested: 1,
+    speed: "standard",
     allowed_material_types: null,
     run_folder: null,
     mission_id: null,
@@ -176,15 +177,18 @@ export function stubExport(): GenerationCommands["exportMission"] {
   };
 }
 
-export type TestCommands = GenerationCommands & { calls: string[] };
+export type TestCommands = GenerationCommands & { calls: string[]; speeds: Array<{ call: string; speed: string }> };
 
 // 시험용 명령: 간격 0의 가짜 명령에 Python 없는 내보내기를 끼우고 overrides로 덮는다. 불린 메서드 이름을 calls에 담는다.
 export function testCommands(ws: { config: ServerConfig; ncs: NcsCatalog }, overrides: Partial<GenerationCommands> = {}): TestCommands {
   const base: GenerationCommands = { ...createFakeCommands(ws.config, ws.ncs, { stepDelayMs: 0 }), exportMission: stubExport(), ...overrides };
   const calls: string[] = [];
+  // 생성과 검수가 받은 속도(셋째 인자). 넘기지 않았으면 "(없음)"으로 남긴다
+  const speeds: Array<{ call: string; speed: string }> = [];
   const record = <K extends keyof GenerationCommands>(name: K): GenerationCommands[K] =>
     ((...args: unknown[]) => {
       calls.push(name);
+      if (name === "generate" || name === "review") speeds.push({ call: name, speed: String(args[2] ?? "(없음)") });
       return (base[name] as (...a: unknown[]) => unknown)(...args);
     }) as GenerationCommands[K];
   return {
@@ -193,7 +197,8 @@ export function testCommands(ws: { config: ServerConfig; ncs: NcsCatalog }, over
     generate: record("generate"),
     review: record("review"),
     exportMission: record("exportMission"),
-    calls
+    calls,
+    speeds
   };
 }
 

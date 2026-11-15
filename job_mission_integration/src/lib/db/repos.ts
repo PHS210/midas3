@@ -340,6 +340,7 @@ export interface GenerationRunRow {
   link_kind: string;
   difficulty: string;
   review_requested: number;
+  speed: string; // standard | fast. 빠른 모드로 만든 실행은 하루 건수를 2건 쓴다
   allowed_material_types: string | null; // JSON 배열, 좁히지 않았으면 null
   run_folder: string | null; // outputs/pilot/v1/runs 아래의 폴더 이름
   mission_id: string | null;
@@ -356,7 +357,7 @@ export interface GenerationRunRow {
 
 const GENERATION_RUN_COLUMNS = [
   "id", "status", "stage", "job_code", "job_name", "exec_job_id", "exec_job_text", "unit_key", "unit_name", "link_kind",
-  "difficulty", "review_requested", "allowed_material_types", "run_folder", "mission_id", "mission_title", "review_verdict",
+  "difficulty", "review_requested", "speed", "allowed_material_types", "run_folder", "mission_id", "mission_title", "review_verdict",
   "rewrites", "catalog_key", "error_code", "error_message", "created_at", "updated_at", "finished_at"
 ] as const;
 // 고칠 수 있는 칸. 칸 이름이 SQL에 들어가므로 이 목록에 있는 것만 받는다.
@@ -411,14 +412,30 @@ export function interruptRunningGenerationRuns(db: Db): number {
   );
 }
 
+// 관리자 설정(admin_settings). 값이 없으면 null.
+export function getAdminSetting(db: Db, key: string): string | null {
+  const row = db.prepare("SELECT value FROM admin_settings WHERE key = ?").get(key) as { value: string } | undefined;
+  return row ? String(row.value) : null;
+}
+
+export function setAdminSetting(db: Db, key: string, value: string): void {
+  db.prepare("INSERT INTO admin_settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")
+    .run(key, value, nowIso());
+}
+
+export function deleteAdminSetting(db: Db, key: string): boolean {
+  return Number(db.prepare("DELETE FROM admin_settings WHERE key = ?").run(key).changes) > 0;
+}
+
 // 하루 시작 건수. 생성 기록을 지워도 줄지 않도록 따로 센다.
 export function getGenerationStartCount(db: Db, day: string): number {
   const row = db.prepare("SELECT started FROM admin_generation_daily WHERE day = ?").get(day) as { started: number } | undefined;
   return Number(row?.started ?? 0);
 }
 
-export function addGenerationStart(db: Db, day: string): number {
-  db.prepare("INSERT INTO admin_generation_daily (day, started) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET started = started + 1").run(day);
+// 오늘 시작한 건수에 count를 더한다(빠른 모드는 2).
+export function addGenerationStart(db: Db, day: string, count = 1): number {
+  db.prepare("INSERT INTO admin_generation_daily (day, started) VALUES (?, ?) ON CONFLICT(day) DO UPDATE SET started = started + excluded.started").run(day, count);
   return getGenerationStartCount(db, day);
 }
 

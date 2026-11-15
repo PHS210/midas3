@@ -371,7 +371,7 @@ test("관심 직무·쓰던 답안: 로그인이 필요하고 메모는 100자�
   }
 });
 
-test("직무 API: 537개 목록, 상세의 비슷한 직무와 체험 가능 여부, 비교, 강점 축", async () => {
+test("직무 API: 537개 목록, 상세의 비슷한 직무와 체험 가능 여부, 강점 축", async () => {
   const srv = await startTestServer();
   const c = new Client(srv.base);
   try {
@@ -389,9 +389,6 @@ test("직무 API: 537개 목록, 상세의 비슷한 직무와 체험 가능 여
     assert.equal((await c.get("/api/jobs/K000000824")).json.job.experienceable, false);
     assert.equal((await c.get("/api/jobs/K12")).status, 400);
     assert.equal((await c.get("/api/jobs/K999999999")).status, 404);
-    const compare = await c.get("/api/jobs/compare?codes=K000001080,K000000872");
-    assert.equal(compare.json.jobs.length, 2);
-    assert.equal((await c.get("/api/jobs/compare?codes=K000001080,K000000872,K000000997,K000001179")).status, 400);
     const byAxis = await c.get("/api/jobs/by-axis/AX1");
     assert.ok(byAxis.json.jobs.length > 0);
     assert.equal((await c.get("/api/jobs/by-axis/AX9")).status, 400);
