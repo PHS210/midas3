@@ -103,13 +103,13 @@ export function missionsRouter({ config, db, missionStore, jobWeightCatalog }: M
     const input = parsed.data;
     const catalogMission = missionStore.findByKey(input.mission_key) ?? missionStore.findById(input.mission?.mission_id);
     if (!catalogMission && !input.mission) {
-      return sendApiError(res, 404, "MISSION_NOT_FOUND", "서버에 없는 미션이야.");
+      return sendApiError(res, 404, "MISSION_NOT_FOUND", "서버에 없는 미션입니다.");
     }
     let attempt = null;
     if (input.attempt_id) {
       attempt = ownedAttempt(res, input.attempt_id);
-      if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없어.");
-      if (!catalogMission) return sendApiError(res, 400, "MISSION_NOT_IN_CATALOG", "기록에 저장하려면 서버 카탈로그의 미션이어야 해.");
+      if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없습니다.");
+      if (!catalogMission) return sendApiError(res, 400, "MISSION_NOT_IN_CATALOG", "기록에 저장하려면 서버 카탈로그에 있는 미션이어야 합니다.");
     }
 
     const missionInput = catalogMission ? missionToEvaluateInput(catalogMission) : input.mission!;
@@ -196,7 +196,7 @@ export function missionsRouter({ config, db, missionStore, jobWeightCatalog }: M
   // 로그인하지 않았으면 브라우저 식별자에 묶어 임시로 두고, 로그인하면 내 기록으로 옮긴다.
   router.post("/api/attempts", (req, res) => {
     const parsed = CreateAttemptRequestSchema.safeParse(req.body ?? {});
-    if (!parsed.success) return sendApiError(res, 400, "ATTEMPT_BAD_REQUEST", "job_codes가 올바르지 않아.", parsed.error.issues);
+    if (!parsed.success) return sendApiError(res, 400, "ATTEMPT_BAD_REQUEST", "job_codes가 올바르지 않습니다.", parsed.error.issues);
     const auth = getAuth(res);
     const anonId = auth.user ? null : ensureAnonId(res, config);
     const attempt = createAttempt(db, { userId: auth.user?.id ?? null, anonId }, {
@@ -208,25 +208,25 @@ export function missionsRouter({ config, db, missionStore, jobWeightCatalog }: M
 
   router.patch("/api/attempts/:id", (req, res) => {
     const attempt = ownedAttempt(res, req.params.id);
-    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없어.");
+    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없습니다.");
     const parsed = UpdateAttemptRequestSchema.safeParse(req.body ?? {});
-    if (!parsed.success) return sendApiError(res, 400, "ATTEMPT_BAD_REQUEST", "pre_answers가 필요해.", parsed.error.issues);
+    if (!parsed.success) return sendApiError(res, 400, "ATTEMPT_BAD_REQUEST", "pre_answers가 필요합니다.", parsed.error.issues);
     updateAttemptPreAnswers(db, attempt.id, parsed.data.pre_answers);
     return res.json({ ok: true });
   });
 
   router.post("/api/attempts/:id/complete", express.json({ limit: "2mb" }), (req, res) => {
     const attempt = ownedAttempt(res, req.params.id);
-    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없어.");
+    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없습니다.");
     const parsed = CompleteAttemptRequestSchema.safeParse(req.body ?? {});
-    if (!parsed.success) return sendApiError(res, 400, "ATTEMPT_SNAPSHOT_INVALID", "결과 스냅샷 형식이 올바르지 않아.", parsed.error.issues);
+    if (!parsed.success) return sendApiError(res, 400, "ATTEMPT_SNAPSHOT_INVALID", "결과 스냅샷 형식이 올바르지 않습니다.", parsed.error.issues);
     completeAttempt(db, attempt.id, parsed.data.snapshot);
     return res.json({ ok: true, saved_to_account: Boolean(attempt.user_id) });
   });
 
   router.get("/api/attempts/:id", (req, res) => {
     const attempt = ownedAttempt(res, req.params.id);
-    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없어.");
+    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없습니다.");
     const missions = listAttemptMissions(db, attempt.id).map((row) => {
       const current = missionStore.findByKey(row.mission_key);
       return {
@@ -241,19 +241,19 @@ export function missionsRouter({ config, db, missionStore, jobWeightCatalog }: M
   // 해설(U21): 이 체험 기록에서 해당 미션을 제출한 사람에게만 기대 답안과 채점 기준을 보여준다.
   router.get("/api/missions/:key/explanation", (req, res) => {
     const mission = missionStore.findByKey(req.params.key);
-    if (!mission) return sendApiError(res, 404, "MISSION_NOT_FOUND", "서버에 없는 미션이야.");
+    if (!mission) return sendApiError(res, 404, "MISSION_NOT_FOUND", "서버에 없는 미션입니다.");
     const attemptId = typeof req.query.attempt_id === "string" ? req.query.attempt_id : "";
     const attempt = attemptId ? ownedAttempt(res, attemptId) : null;
-    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없어.");
+    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없습니다.");
     const submitted = listAttemptMissions(db, attempt.id).some((row) => row.mission_key === mission.key);
-    if (!submitted) return sendApiError(res, 403, "EXPLANATION_LOCKED", "해설은 이 미션을 제출한 뒤에 볼 수 있어.");
+    if (!submitted) return sendApiError(res, 403, "EXPLANATION_LOCKED", "해설은 이 미션을 제출한 뒤에 확인하실 수 있습니다.");
     res.setHeader("Cache-Control", "no-store");
     return res.json(missionExplanation(mission));
   });
 
   router.delete("/api/attempts/:id", requireCsrf, (req, res) => {
     const attempt = ownedAttempt(res, req.params.id);
-    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없어.");
+    if (!attempt) return sendApiError(res, 404, "ATTEMPT_NOT_FOUND", "체험 기록을 찾을 수 없습니다.");
     deleteAttempt(db, attempt.id);
     return res.json({ ok: true });
   });

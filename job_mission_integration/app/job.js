@@ -32,7 +32,7 @@ function scoreRows(key, limit) {
       <div class="bar" title="직업 내 중요도 ${within ?? "-"} / 5"><i style="width:${Math.max(0, Math.min(100, ((within ?? 0) / 5) * 100))}%"></i></div>
       <div class="between">${between === null || between === undefined ? "-" : `다른 직업 대비 <strong>${between}</strong>`}</div>
     </div>`;
-  }).join("") || `<p class="muted small">이 항목은 자료가 없어.</p>`;
+  }).join("") || `<p class="muted small">이 항목은 자료가 없습니다.</p>`;
 }
 
 function renderTraits() {
@@ -49,7 +49,7 @@ function renderTraits() {
 
 function prospectHtml() {
   const dist = job.prospect.distribution.filter((d) => d.ratio !== null);
-  if (!dist.length) return `<p class="muted">전망 자료가 없어.</p>`;
+  if (!dist.length) return `<p class="muted">전망 자료가 없습니다.</p>`;
   return `<div class="stack" role="img" aria-label="${esc(dist.map((d) => `${d.label} ${d.ratio}%`).join(", "))}">
       ${dist.map((d) => `<span style="width:${d.ratio}%;background:${PROSPECT_COLORS[d.label] || "#62666d"}"></span>`).join("")}
     </div>
@@ -65,23 +65,23 @@ function educationHtml() {
 }
 
 function similarHtml() {
-  if (!job.similar?.length) return `<p class="muted">비슷한 직무 자료가 없어.</p>`;
+  if (!job.similar?.length) return `<p class="muted">비슷한 직무 자료가 없습니다.</p>`;
   return `<div class="grid grid-3">${job.similar.map((s) => `<article class="card sim-card">
       <a href="/job.html?code=${esc(s.code)}" style="font-weight:600;color:var(--t1);text-decoration:none">${esc(s.name)}</a>
       ${s.experienceable ? ` <span class="chip chip-ok">체험 가능</span>` : ""}
       <p class="why" style="margin-top:6px">공통점: ${s.common.map(esc).join(", ")}</p>
       <p class="why">차이: ${s.diff.map((d) => `${esc(d.name)} (이 직무 ${d.mine} · 저 직무 ${d.theirs})`).join(", ")}</p>
     </article>`).join("")}</div>
-    <p class="small muted" style="margin-top:6px">KNOW 업무활동 41개의 중요도가 얼마나 비슷한지로 골랐어. 숫자는 5점 만점 중요도야.</p>`;
+    <p class="small muted" style="margin-top:6px">KNOW 업무활동 41개의 중요도가 얼마나 비슷한지를 기준으로 선정했습니다. 숫자는 5점 만점 기준 중요도입니다.</p>`;
 }
 
 function unavailableHtml() {
   // 체험할 수 없는 직무 안내(U05-1): 비슷한 직무 중 체험 가능한 것, 없으면 체험 가능한 직무 목록으로
   const alt = (job.similar || []).filter((s) => s.experienceable);
   return `<div class="notice notice-warn" id="no-experience">
-    아직 이 직무는 체험 미션이 없어. ${alt.length
-      ? `대신 비슷한 일을 하는 ${alt.map((s) => `<a href="/job.html?code=${esc(s.code)}">${esc(s.name)}</a>`).join(", ")}을(를) 체험해볼 수 있어.`
-      : `<a href="/jobs.html?exp=1">체험 가능한 직무 보기</a>에서 다른 직무를 골라봐.`}
+    이 직무는 아직 체험 미션이 준비되지 않았습니다. ${alt.length
+      ? `대신 비슷한 일을 하는 ${alt.map((s) => `<a href="/job.html?code=${esc(s.code)}">${esc(s.name)}</a>`).join(", ")}을(를) 체험해 보실 수 있습니다.`
+      : `<a href="/jobs.html?exp=1">체험 가능한 직무 보기</a>에서 다른 직무를 선택해 보세요.`}
   </div>`;
 }
 
@@ -129,7 +129,7 @@ function render(meta) {
     <div id="traits"></div>
 
     <h2 class="sec-h">근무 환경</h2>
-    <div>${(job.environment || []).slice(0, 6).map(([name, within, between]) => `<div class="score-row"><div>${esc(name)}</div><div class="bar"><i style="width:${((within ?? 0) / 5) * 100}%"></i></div><div class="between">${between ?? "-"}</div></div>`).join("") || `<p class="muted">자료가 없어.</p>`}</div>
+    <div>${(job.environment || []).slice(0, 6).map(([name, within, between]) => `<div class="score-row"><div>${esc(name)}</div><div class="bar"><i style="width:${((within ?? 0) / 5) * 100}%"></i></div><div class="between">${between ?? "-"}</div></div>`).join("") || `<p class="muted">자료가 없습니다.</p>`}</div>
 
     <h2 class="sec-h">임금·만족도·전망</h2>
     <div class="grid grid-3">
@@ -140,7 +140,7 @@ function render(meta) {
       <div class="card"><div class="small muted">일자리 전망</div>${prospectHtml()}</div>
     </div>
 
-    <h2 class="sec-h">어떻게 준비해?</h2>
+    <h2 class="sec-h">준비 방법</h2>
     ${job.way ? `<p style="color:var(--t2);font-size:14px">${esc(job.way)}</p>` : ""}
     <div class="chips" style="margin-top:10px">${job.majors.map((m) => `<span class="chip">${esc(m)}</span>`).join("")}${job.certs.map((c) => `<span class="chip chip-a">${esc(c)}</span>`).join("")}</div>
     ${educationHtml()}
@@ -179,7 +179,7 @@ async function onClick(event) {
   if (!target) return;
   if (target.closest("#compare-btn")) {
     const result = toggleCompare(job);
-    if (result === "full") toast(`비교는 ${COMPARE_MAX}개까지 담을 수 있어. 하나를 빼고 다시 담아줘.`);
+    if (result === "full") toast(`비교함에는 최대 ${COMPARE_MAX}개까지 담을 수 있습니다. 하나를 뺀 뒤 다시 담아 주세요.`);
     renderCompareButton();
     return;
   }
@@ -191,19 +191,19 @@ async function onClick(event) {
   try {
     if (action === "save") {
       interest = (await api("PUT", `/api/me/interests/${job.code}`, {})).interest;
-      toast("관심 직무에 저장했어.");
+      toast("관심 직무에 저장했습니다.");
       renderInterest();
     } else if (action === "unsave") {
       await api("DELETE", `/api/me/interests/${job.code}`);
       interest = null;
-      toast("관심 직무에서 뺐어.");
+      toast("관심 직무에서 해제했습니다.");
       renderInterest();
     } else if (action === "memo") {
       interest = (await api("PUT", `/api/me/interests/${job.code}`, { memo: $("memo").value })).interest;
-      toast("메모를 저장했어.");
+      toast("메모를 저장했습니다.");
     }
   } catch (error) {
-    toast(error.message || "저장하지 못했어.");
+    toast(error.message || "저장하지 못했습니다.");
   }
 }
 
@@ -213,13 +213,13 @@ async function start() {
   initCompareTray();
   const code = qs("code") || "";
   if (!/^K\d{9}$/.test(code)) {
-    main.innerHTML = `<div class="empty">직무를 찾을 수 없어. <div class="btn-row"><a class="btn" href="/jobs.html">직무 탐색으로</a></div></div>`;
+    main.innerHTML = `<div class="empty">직무를 찾을 수 없습니다. <div class="btn-row"><a class="btn" href="/jobs.html">직무 탐색으로</a></div></div>`;
     return;
   }
   try {
     const res = await fetch(`/api/jobs/${code}`);
     if (res.status === 404) {
-      main.innerHTML = `<div class="empty">그 직무는 없어. <div class="btn-row"><a class="btn" href="/jobs.html">직무 탐색으로</a></div></div>`;
+      main.innerHTML = `<div class="empty">해당 직무가 없습니다. <div class="btn-row"><a class="btn" href="/jobs.html">직무 탐색으로</a></div></div>`;
       return;
     }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -230,7 +230,7 @@ async function start() {
     await loadInterest();
     render(data.meta);
   } catch (error) {
-    main.innerHTML = `<div class="notice notice-err">직무 정보를 불러오지 못했어. 잠시 후 다시 시도해줘.</div>`;
+    main.innerHTML = `<div class="notice notice-err">직무 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>`;
     return;
   }
   main.addEventListener("click", onClick);

@@ -216,8 +216,8 @@ export function advanceMissionFlow(ctx) {
   if (state.pendingScores.length > 0) {
     appNode.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:20px">
       <div class="loading-dots"><span></span><span></span><span></span></div>
-      <div style="font-size:16px;font-weight:600">결과를 분석하고 있어요</div>
-      <div style="font-size:13px;color:var(--sub);text-align:center">AI가 답변을 꼼꼼히 검토하고 있어요.<br>잠시만 기다려주세요.</div>
+      <div style="font-size:16px;font-weight:600">결과를 분석하고 있습니다</div>
+      <div style="font-size:13px;color:var(--sub);text-align:center">AI가 답변을 검토하고 있습니다.<br>잠시만 기다려 주세요.</div>
     </div>`;
     Promise.all(state.pendingScores).then(async () => {
       state.pendingScores = [];

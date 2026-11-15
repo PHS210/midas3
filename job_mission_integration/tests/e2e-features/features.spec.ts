@@ -69,7 +69,7 @@ test("직무 탐색: 537개 목록, 이름·일상어 검색, 분야 필터, 상
   await expect(page.locator("#count")).not.toHaveText("0개 직무");
   // 결과 없음 안내
   await page.locator("#q").fill("zzqqxx없는말");
-  await expect(page.locator(".empty")).toContainText("이런 말로도 찾아봐");
+  await expect(page.locator(".empty")).toContainText("이런 표현으로도 검색해 보세요");
   // 상태 유지: 검색어·체험 가능 필터가 URL에 남고, 상세에서 돌아와도 그대로
   await page.locator("#q").fill("분석");
   await page.locator("#exp").check();
@@ -130,7 +130,7 @@ test("로그인 전 체험 → 결과 확장(해석·근거·흥미 변화·재�
   const errors = trackErrors(page);
   await playToResult(page);
 
-  await expect(page.locator("#save-status")).toContainText("로그인하면 이 결과를 내 기록에 저장");
+  await expect(page.locator("#save-status")).toContainText("이 결과를 내 기록에 저장");
   await expect(page.getByText("가짜 채점 모드")).toBeVisible();
 
   // U17 결과 해석
@@ -224,10 +224,10 @@ test("로그인 후 체험: 관심 저장·메모, 답안 자동 저장과 이�
   // 제출 → 내 기록에 저장
   await page.locator("#m-ans").fill(ANSWER);
   await page.locator("#btn-mnext").click();
-  await expect(page.locator("#save-status")).toContainText("내 기록에 저장됐어", { timeout: 30_000 });
+  await expect(page.locator("#save-status")).toContainText("내 기록에 저장되었습니다", { timeout: 30_000 });
 
   await page.goto("/me.html");
-  await expect(page.getByRole("heading", { name: "쓰던 답안 이어 하기" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "작성 중인 답안" })).toHaveCount(0);
   const record = page.locator(".card.record").first();
   await expect(record).toContainText("데이터분석가");
   await record.getByRole("link", { name: "결과 다시 보기" }).click();
@@ -338,7 +338,7 @@ test("관심 직무: 비교할 직무를 고르고, 메모가 비교 담기 뒤�
   await expect(memoBox).toBeVisible();
   await memoBox.fill(memo);
   await page.locator('[data-memo="K000001080"]').click();
-  await expect(page.getByText("메모를 저장했어.")).toBeVisible();
+  await expect(page.getByText("메모를 저장했습니다.")).toBeVisible();
   await page.locator('.card.interest [data-compare="K000001080"]').click();
   await expect(page.locator("textarea#memo-K000001080")).toHaveValue(memo);
 

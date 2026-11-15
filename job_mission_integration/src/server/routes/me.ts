@@ -112,32 +112,32 @@ export function meRouter({ db, missionStore, jobsCatalog }: MeDeps) {
 
   router.put("/api/me/interests/:code", (req, res) => {
     const code = CodeSchema.safeParse(req.params.code);
-    if (!code.success || !jobsCatalog.has(code.data)) return sendApiError(res, 404, "JOB_NOT_FOUND", "그 직무를 찾을 수 없어.");
+    if (!code.success || !jobsCatalog.has(code.data)) return sendApiError(res, 404, "JOB_NOT_FOUND", "해당 직무를 찾을 수 없습니다.");
     const memoRaw = (req.body ?? {}).memo;
     const memo = memoRaw === undefined ? undefined : MemoSchema.safeParse(String(memoRaw).trim());
-    if (memo && !memo.success) return sendApiError(res, 400, "MEMO_TOO_LONG", "메모는 100자까지 쓸 수 있어.");
+    if (memo && !memo.success) return sendApiError(res, 400, "MEMO_TOO_LONG", "메모는 100자까지 입력할 수 있습니다.");
     const row = upsertInterest(db, getAuth(res).user!.id, code.data, memo?.data);
     return res.json({ interest: row });
   });
 
   router.delete("/api/me/interests/:code", (req, res) => {
     const removed = deleteInterest(db, getAuth(res).user!.id, req.params.code);
-    if (!removed) return sendApiError(res, 404, "INTEREST_NOT_FOUND", "관심 직무에 없어.");
+    if (!removed) return sendApiError(res, 404, "INTEREST_NOT_FOUND", "관심 직무에 등록되어 있지 않습니다.");
     return res.json({ ok: true });
   });
 
   // ── 쓰던 답안 이어 하기 ──────────────────────
   router.get("/api/me/drafts/:missionKey", (req, res) => {
     const draft = getDraft(db, getAuth(res).user!.id, req.params.missionKey);
-    if (!draft) return sendApiError(res, 404, "DRAFT_NOT_FOUND", "저장된 답안이 없어.");
+    if (!draft) return sendApiError(res, 404, "DRAFT_NOT_FOUND", "저장된 답안이 없습니다.");
     return res.json({ draft });
   });
 
   router.put("/api/me/drafts/:missionKey", (req, res) => {
     const mission = missionStore.findByKey(req.params.missionKey);
-    if (!mission) return sendApiError(res, 404, "MISSION_NOT_FOUND", "서버에 없는 미션이야.");
+    if (!mission) return sendApiError(res, 404, "MISSION_NOT_FOUND", "서버에 없는 미션입니다.");
     const answer = String((req.body ?? {}).answer ?? "");
-    if (answer.length > 3000) return sendApiError(res, 400, "DRAFT_TOO_LONG", "답안은 3000자까지 저장할 수 있어.");
+    if (answer.length > 3000) return sendApiError(res, 400, "DRAFT_TOO_LONG", "답안은 3,000자까지 저장할 수 있습니다.");
     const draft = upsertDraft(db, getAuth(res).user!.id, mission.key, mission.job_code, answer);
     return res.json({ draft });
   });

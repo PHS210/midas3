@@ -36,7 +36,7 @@ export const EvaluateRequestSchema = z.object({
   attempt_id: z.string().uuid().optional(),
   round: z.number().int().min(1).max(5).optional(),
   self_report: z.record(z.unknown()).optional()
-}).refine((value) => Boolean(value.mission || value.mission_key), { message: "mission 또는 mission_key가 필요해." });
+}).refine((value) => Boolean(value.mission || value.mission_key), { message: "mission 또는 mission_key가 필요합니다." });
 
 export const EvaluateResponseSchema = z.object({
   evaluation: EvaluationSchema,

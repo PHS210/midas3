@@ -19,11 +19,11 @@ export function renderEvidenceSection({ axes, summary, axisMeta, levelInfo, esc 
 
     const foundItems = result.evidence.slice(0, 2).map((evidence) => {
       const behaviorMap = {
-        AX1: "수치나 데이터를 활용해 분석했어요",
-        AX2: "상황을 면밀히 관찰하고 변수를 짚었어요",
-        AX3: "선택지를 비교하거나 우선순위를 정했어요",
-        AX4: "팀·조직 관점에서 역할과 흐름을 생각했어요",
-        AX5: "상대방 입장을 고려하거나 공감을 표현했어요"
+        AX1: "수치나 데이터를 활용해 분석했습니다",
+        AX2: "상황을 면밀히 관찰하고 변수를 짚었습니다",
+        AX3: "선택지를 비교하거나 우선순위를 정했습니다",
+        AX4: "팀·조직 관점에서 역할과 흐름을 고려했습니다",
+        AX5: "상대방 입장을 고려하거나 공감을 표현했습니다"
       };
       const behavior = behaviorMap[evidence.primary_axis] || evidence.behavior || "";
       return `<div class="ev-found">
@@ -33,11 +33,11 @@ export function renderEvidenceSection({ axes, summary, axisMeta, levelInfo, esc 
     }).join("");
 
     const noEvidenceNote = level === 0
-      ? `<div class="ev-none">이 미션에서는 이 능력이 잘 드러나지 않았어요. 다음엔 ${meta.examples[0]}을(를) 포함해 보세요.</div>`
+      ? `<div class="ev-none">이 미션에서는 이 능력이 잘 드러나지 않았습니다. 다음에는 ${meta.examples[0]}을(를) 포함해 보세요.</div>`
       : "";
 
     const lowConfNote = isLow
-      ? "<div class=\"ev-lowconf\">⚠️ AI가 이 부분을 판단하기 어려웠어요. 답변이 짧거나 관련 내용이 적었을 수 있어요.</div>"
+      ? "<div class=\"ev-lowconf\">⚠️ AI가 이 부분을 판단하기 어려웠습니다. 답변이 짧거나 관련 내용이 적었을 수 있습니다.</div>"
       : "";
 
     return `<div class="ev-card2 ${level === 0 ? "ev-card2-zero" : level >= 3 ? "ev-card2-high" : ""}">

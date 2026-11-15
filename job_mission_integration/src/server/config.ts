@@ -118,7 +118,8 @@ export function loadServerConfig(env: NodeJS.ProcessEnv = process.env): ServerCo
       kakaoClientId: (env.KAKAO_LOGIN_CLIENT_ID ?? "").trim(),
       kakaoClientSecret: (env.KAKAO_LOGIN_CLIENT_SECRET ?? "").trim(),
       kakaoAdminKey: (env.KAKAO_ADMIN_KEY ?? "").trim(),
-      kakaoRedirectUri: (env.KAKAO_LOGIN_REDIRECT_URI ?? `${publicBaseUrl}/auth/kakao/callback`).trim(),
+      // 이름만 있고 값이 빈 경우(.env 예시의 기본 모습)에도 기본 주소를 쓴다.
+      kakaoRedirectUri: (env.KAKAO_LOGIN_REDIRECT_URI ?? "").trim() || `${publicBaseUrl}/auth/kakao/callback`,
       sessionIdleDays: positiveIntFromEnv(env.SESSION_IDLE_DAYS, 7),
       sessionMaxDays: positiveIntFromEnv(env.SESSION_MAX_DAYS, 30),
       anonymousRetentionHours: positiveIntFromEnv(env.ANONYMOUS_RESULT_RETENTION_HOURS, 24)
